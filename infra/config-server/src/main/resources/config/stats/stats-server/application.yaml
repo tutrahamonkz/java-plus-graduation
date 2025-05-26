@@ -1,10 +1,10 @@
 server:
   port: 0
 stat-server:
-  name: stat-server
+  name: stats-server
 spring:
   application:
-    name: stat-server
+    name: stats-server
   jpa:
     hibernate:
       ddl-auto: none
