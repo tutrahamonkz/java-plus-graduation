@@ -31,7 +31,7 @@ public class StatClient {
     private final DiscoveryClient discoveryClient;
 
     @Autowired
-    public StatClient(@Value("${stat-server.name}") String serverId, DiscoveryClient discoveryClient) {
+    public StatClient(@Value("${stats-server.name}") String serverId, DiscoveryClient discoveryClient) {
         this.discoveryClient = discoveryClient;
         this.restClient = RestClient.create(makeURI(serverId));
     }
