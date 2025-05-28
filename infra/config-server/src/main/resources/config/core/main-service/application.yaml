@@ -1,7 +1,9 @@
 server:
   port: 0
+
 stats-server:
   name: stats-server
+
 spring:
   application:
     name: main-service
@@ -19,6 +21,7 @@ spring:
     url: jdbc:postgresql://localhost:6543/main
     username: main
     password: main
+
 logging:
   level:
     org:
