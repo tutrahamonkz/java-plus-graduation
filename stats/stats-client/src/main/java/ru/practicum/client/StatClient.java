@@ -27,17 +27,19 @@ import java.util.List;
 @Component
 @Slf4j
 public class StatClient {
-    private final RestClient restClient;
     private final DiscoveryClient discoveryClient;
+    private RestClient restClient;
+    private final String serverId;
 
     @Autowired
     public StatClient(@Value("${stats-server.name}") String serverId, DiscoveryClient discoveryClient) {
         this.discoveryClient = discoveryClient;
-        this.restClient = RestClient.create(makeURI(serverId));
+        this.serverId = serverId;
     }
 
     public ResponseEntity<Void> hit(@Valid HitDto hitDto) { //Сохранение информации о том, что на uri конкретного сервиса был отправлен запрос пользователем с ip
         try {
+            initializeStatsClient(serverId);
             ResponseEntity<Void> response = restClient.post()
                     .uri("/hit")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -54,6 +56,7 @@ public class StatClient {
 
     public ResponseEntity<List<StatsDto>> getStats(String start, String end, List<String> uris, boolean unique) { // Получение статистики по посещениям.
         try {
+            initializeStatsClient(serverId);
             ResponseEntity<List<StatsDto>> response = restClient.get()
                     .uri(buildStatsUri(start, end, uris, unique))
                     .retrieve()
@@ -76,6 +79,12 @@ public class StatClient {
                 .queryParam("uris", uris)
                 .queryParam("unique", unique);
         return uriBuilder.toUriString();
+    }
+
+    private synchronized void initializeStatsClient(String serviceId) {
+        if (restClient == null) {
+            restClient = RestClient.create(makeURI(serviceId));
+        }
     }
 
     private ServiceInstance getInstance(String serviceId) {
@@ -106,6 +115,7 @@ public class StatClient {
     }
 
     private String makeURI(String serviceId) {
+        log.info("Получаем url stats-client");
         ServiceInstance instance = createRetryTemplate().execute(cxt -> getInstance(serviceId));
         return "http://" + instance.getHost() + ":" + instance.getPort();
     }
