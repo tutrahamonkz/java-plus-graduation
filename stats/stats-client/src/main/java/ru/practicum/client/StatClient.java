@@ -4,8 +4,10 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -28,8 +30,8 @@ import java.util.List;
 @Slf4j
 public class StatClient {
     private final DiscoveryClient discoveryClient;
-    private RestClient restClient;
     private final String serverId;
+    private RestClient restClient;
 
     @Autowired
     public StatClient(@Value("${stats-server.name}") String serverId, DiscoveryClient discoveryClient) {
@@ -39,7 +41,6 @@ public class StatClient {
 
     public ResponseEntity<Void> hit(@Valid HitDto hitDto) { //Сохранение информации о том, что на uri конкретного сервиса был отправлен запрос пользователем с ip
         try {
-            initializeStatsClient(serverId);
             ResponseEntity<Void> response = restClient.post()
                     .uri("/hit")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -56,7 +57,6 @@ public class StatClient {
 
     public ResponseEntity<List<StatsDto>> getStats(String start, String end, List<String> uris, boolean unique) { // Получение статистики по посещениям.
         try {
-            initializeStatsClient(serverId);
             ResponseEntity<List<StatsDto>> response = restClient.get()
                     .uri(buildStatsUri(start, end, uris, unique))
                     .retrieve()
@@ -79,12 +79,6 @@ public class StatClient {
                 .queryParam("uris", uris)
                 .queryParam("unique", unique);
         return uriBuilder.toUriString();
-    }
-
-    private synchronized void initializeStatsClient(String serviceId) {
-        if (restClient == null) {
-            restClient = RestClient.create(makeURI(serviceId));
-        }
     }
 
     private ServiceInstance getInstance(String serviceId) {
@@ -114,9 +108,19 @@ public class StatClient {
         return retryTemplate;
     }
 
-    private String makeURI(String serviceId) {
-        log.info("Получаем url stats-client");
-        ServiceInstance instance = createRetryTemplate().execute(cxt -> getInstance(serviceId));
-        return "http://" + instance.getHost() + ":" + instance.getPort();
+    private String makeURI() {
+        ServiceInstance instance = createRetryTemplate().execute(cxt -> getInstance(serverId));
+        String uri = "http://" + instance.getHost() + ":" + instance.getPort();
+        log.info("URL Сервера статистики найден: {}", uri);
+        return uri;
+    }
+
+    // Инициализирует stats-client после запуска приложения, иначе сервис использующий клиент некорректно
+    // регистрируется в eureka
+    @EventListener(ApplicationReadyEvent.class)
+    private void setupStatsClient() {
+        if (restClient == null) {
+            restClient = RestClient.create(makeURI());
+        }
     }
 }
