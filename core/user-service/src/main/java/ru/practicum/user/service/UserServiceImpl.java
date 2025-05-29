@@ -102,12 +102,8 @@ public class UserServiceImpl implements UserService {
     }
 
     public UserShortDto getUserById(Long id) {
+        log.info("Запрос на получение пользователя по id: {}", id);
         return UserMapper.toUserShortDto(userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Пользователь с id " + id + " не найден")));
-    }
-
-    @Override
-    public Boolean checkUser(Long userId) {
-        return userRepository.existsById(userId);
     }
 }

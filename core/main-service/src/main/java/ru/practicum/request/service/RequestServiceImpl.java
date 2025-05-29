@@ -4,7 +4,6 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import ru.practicum.event.model.Event;
 import ru.practicum.event.model.State;
@@ -51,7 +50,7 @@ public class RequestServiceImpl implements RequestService {
         checkParticipantLimit(event.getParticipantLimit(), getConfirmedRequests(eventId));
 
 
-        if (userClient.checkUser(userId).getStatusCode() == HttpStatus.NOT_FOUND) {
+        if (userClient.getUser(userId).getBody() == null) {
             throw new NotFoundException("Не найден пользователь с id: " + userId);
         }
 
@@ -80,13 +79,13 @@ public class RequestServiceImpl implements RequestService {
 
     @Override
     public List<ParticipationRequestDto> getAllByParticipantId(long userId) {
-        List<Request> foundRequests = requestRepository.findAllByRequester_Id(userId);
+        List<Request> foundRequests = requestRepository.findAllByRequester(userId);
         return requestMapper.toDtoList(foundRequests);
     }
 
     @Override
     public List<ParticipationRequestDto> getAllByInitiatorIdAndEventId(long userId, long eventId) {
-        List<Request> foundRequests = requestRepository.findAllByInitiatorIdAndEventId(userId, eventId);
+        List<Request> foundRequests = requestRepository.findAllByInitiatorAndEventId(userId, eventId);
         return requestMapper.toDtoList(foundRequests);
     }
 

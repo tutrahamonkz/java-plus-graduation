@@ -128,7 +128,7 @@ public class EventServiceImpl implements EventService {
         if (rq.getEventDate() != null && rq.getEventDate().isBefore(LocalDateTime.now().plusHours(2L))) {
             throw new ConflictTimeException("Время не может быть раньше, через два часа от текущего момента");
         }
-        Event ev = eventRepository.findByIdAndInitiatorId(eventId, userId)
+        Event ev = eventRepository.findByIdAndInitiator(eventId, userId)
                 .orElseThrow(() -> new NotFoundException(
                         String.format("Событие с id %d для пользователя с id %d не найдено.", eventId, userId)));
         if (ev.getState() == State.PUBLISHED) {

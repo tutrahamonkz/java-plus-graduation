@@ -15,6 +15,4 @@ public interface UserService {
     void delete(Long id);
 
     UserShortDto getUserById(Long id);
-
-    Boolean checkUser(Long userId);
 }

@@ -1,7 +1,6 @@
 package ru.practicum.user.client;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +11,7 @@ import ru.practicum.user.dto.UsersDtoGetParam;
 
 import java.util.List;
 
-@FeignClient(name = "user")
+@FeignClient(name = "user-service", path = "/admin/users")
 public interface UserClient {
 
     @GetMapping
@@ -26,9 +25,6 @@ public interface UserClient {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     ResponseEntity<String> deleteUser(@PathVariable Long userId);
 
-    @GetMapping
-    ResponseEntity<Void> checkUser(@RequestBody @NotNull Long userId);
-
-    @GetMapping
-    ResponseEntity<UserShortDto> getUser(@RequestBody @NotNull Long userId);
+    @GetMapping("/{userId}")
+    ResponseEntity<UserShortDto> getUser(@PathVariable Long userId);
 }

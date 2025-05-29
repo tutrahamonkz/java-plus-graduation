@@ -1,7 +1,6 @@
 package ru.practicum.user.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,15 +46,7 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<Void> checkUser(@RequestBody @NotNull Long userId) {
-        if (userService.checkUser(userId)) {
-            return ResponseEntity.status(HttpStatus.OK).build();
-        }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-    }
-
-    @GetMapping
-    public ResponseEntity<UserShortDto> getUser(@RequestBody @NotNull Long userId) {
+    public ResponseEntity<UserShortDto> getUser(@PathVariable Long userId) {
         return ResponseEntity.ok(userService.getUserById(userId));
     }
 }

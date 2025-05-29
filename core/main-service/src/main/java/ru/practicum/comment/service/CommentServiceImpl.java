@@ -2,7 +2,6 @@ package ru.practicum.comment.service;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.comment.dto.CommentDto;
@@ -61,7 +60,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentDto updateComment(Long userId, CommentDto commentDto) {
-        checkUser(userId);
+        getUser(userId);
         Event event = eventService.getPublicEventById(commentDto.getEventId());
         Comment comment = getCommentById(commentDto.getId());
         CommentMapper.INSTANCE.updateDto(commentDto, comment);
@@ -73,7 +72,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public void deleteComment(Long userId, Long commentId) {
-        checkUser(userId);
+        getUser(userId);
         if (commentRepository.existsById(commentId)) {
             log.info("Delete comment: {}", commentId);
             commentRepository.deleteById(commentId);
@@ -94,7 +93,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentDto getComment(Long userId, Long commentId) {
-        checkUser(userId);
+        getUser(userId);
         log.info("Get comment by id: {}", commentId);
         return CommentMapper.INSTANCE.toDto(getCommentById(commentId));
     }
@@ -106,7 +105,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentDto createReply(Long userId, Long parentCommentId, CommentDto commentDto) {
-        checkUser(userId);
+        getUser(userId);
         Comment parentComment = commentRepository.findById(parentCommentId)
                 .orElseThrow(() -> new NotFoundException("Parent comment not found: " + parentCommentId));
 
@@ -125,9 +124,11 @@ public class CommentServiceImpl implements CommentService {
         return CommentMapper.INSTANCE.toDtos(commentRepository.findAllByParentCommentId(commentId));
     }
 
-    private void checkUser(Long userId) {
-        if (userClient.checkUser(userId).getStatusCode() == HttpStatus.NOT_FOUND) {
+    private UserShortDto getUser(Long userId) {
+        UserShortDto user = userClient.getUser(userId).getBody();
+        if (user == null) {
             throw new NotFoundException("Не найден пользователь с id: " + userId);
         }
+        return user;
     }
 }
