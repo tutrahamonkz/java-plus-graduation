@@ -152,6 +152,7 @@ public class CompilationServiceImpl implements CompilationService {
         List<EventShortDto> events = compilation.getEvents().stream()
                 .map(eventMapper::toEventShortDto)
                 .toList();
+
         cd.setEvents(events);
         return cd;
     }

@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.event.mapper.LocationMapper;
 import ru.practicum.event.model.Location;
 import ru.practicum.event.repository.LocationRepository;
 
@@ -15,7 +14,6 @@ import ru.practicum.event.repository.LocationRepository;
 @Slf4j
 public class LocationServiceImpl implements LocationService {
     private final LocationRepository locationRepository;
-    private final LocationMapper mapper;
 
     @Override
     @Transactional(propagation = Propagation.REQUIRED)

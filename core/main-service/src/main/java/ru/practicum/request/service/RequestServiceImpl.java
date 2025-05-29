@@ -4,6 +4,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import ru.practicum.event.model.Event;
 import ru.practicum.event.model.State;
@@ -17,8 +18,7 @@ import ru.practicum.request.mapper.RequestMapper;
 import ru.practicum.request.model.Request;
 import ru.practicum.request.model.RequestStatus;
 import ru.practicum.request.repository.RequestRepository;
-import ru.practicum.user.model.User;
-import ru.practicum.user.repository.UserRepository;
+import ru.practicum.user.client.UserClient;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -29,10 +29,10 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
 public class RequestServiceImpl implements RequestService {
-    UserRepository userRepository;
-    EventRepository eventRepository;
-    RequestRepository requestRepository;
-    RequestMapper requestMapper;
+    private final UserClient userClient;
+    private final EventRepository eventRepository;
+    private final RequestRepository requestRepository;
+    private final RequestMapper requestMapper;
 
     @Override
     public ParticipationRequestDto createParticipationRequest(long userId, long eventId) {
@@ -44,14 +44,16 @@ public class RequestServiceImpl implements RequestService {
             throw new ConditionsNotMetException("Нельзя участвовать в неопубликованном событии");
         }
 
-        if (event.getInitiator().getId().equals(userId)) {
+        if (event.getInitiator().equals(userId)) {
             throw new ConditionsNotMetException("Инициатор события не может добавить запрос на участие в своём событии");
         }
 
         checkParticipantLimit(event.getParticipantLimit(), getConfirmedRequests(eventId));
 
-        User requester = userRepository.findById(userId).orElseThrow(
-                () -> new NotFoundException(String.format("Пользователь с id=%d не найден", userId)));
+
+        if (userClient.checkUser(userId).getStatusCode() == HttpStatus.NOT_FOUND) {
+            throw new NotFoundException("Не найден пользователь с id: " + userId);
+        }
 
         RequestStatus status = RequestStatus.PENDING;
         if (event.getParticipantLimit() == 0) {
@@ -62,7 +64,7 @@ public class RequestServiceImpl implements RequestService {
 
         Request request = Request.builder()
                 .event(event)
-                .requester(requester)
+                .requester(userId)
                 .status(status)
                 .created(LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS))
                 .build();
@@ -123,7 +125,7 @@ public class RequestServiceImpl implements RequestService {
                 () -> new NotFoundException(String.format("Запрос на участие в событии с id запроса=%d не найден", requestId))
         );
 
-        Long requesterId = request.getRequester().getId();
+        Long requesterId = request.getRequester();
         if (!requesterId.equals(userId)) {
             throw new ConditionsNotMetException("Пользователь не является участником в запросе на участие в событии");
         }

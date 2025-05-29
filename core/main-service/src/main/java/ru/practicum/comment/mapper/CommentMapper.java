@@ -4,6 +4,7 @@ import org.mapstruct.*;
 import org.mapstruct.factory.Mappers;
 import ru.practicum.comment.dto.CommentDto;
 import ru.practicum.comment.model.Comment;
+import ru.practicum.user.dto.UserShortDto;
 
 import java.util.List;
 
@@ -12,8 +13,15 @@ public interface CommentMapper {
 
     CommentMapper INSTANCE = Mappers.getMapper(CommentMapper.class);
 
-    @Mapping(target = "eventId", source = "event.id")
-    @Mapping(target = "parentCommentId", source = "parentComment.id")
+    @Mapping(target = "id", source = "comment.id")
+    @Mapping(target = "eventId", source = "comment.event.id")
+    @Mapping(target = "parentCommentId", source = "comment.parentComment.id")
+    @Mapping(target = "user", source = "userShortDto")
+    CommentDto toDto(Comment comment, UserShortDto userShortDto);
+
+    @Mapping(target = "eventId", source = "comment.event.id")
+    @Mapping(target = "parentCommentId", source = "comment.parentComment.id")
+    @Mapping(target = "user", ignore = true)
     CommentDto toDto(Comment comment);
 
     @Mapping(target = "user", ignore = true)
@@ -23,8 +31,10 @@ public interface CommentMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "parentComment", ignore = true)
+    @Mapping(target = "user", ignore = true)
     Comment toEntity(CommentDto commentDto);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "user", ignore = true)
     void updateDto(CommentDto commentDto, @MappingTarget Comment comment);
 }

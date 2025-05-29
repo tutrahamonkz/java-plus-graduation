@@ -1,13 +1,14 @@
 package ru.practicum.user.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.client.StatClient;
 import ru.practicum.user.dto.UserDto;
+import ru.practicum.user.dto.UserShortDto;
 import ru.practicum.user.dto.UsersDtoGetParam;
 import ru.practicum.user.service.UserService;
 
@@ -21,7 +22,6 @@ public class UserController {
     private static final String APP_NAME = "ewm-main-service";
 
     private final UserService userService;
-    private final StatClient statClient;
 
     @GetMapping
     public ResponseEntity<List<UserDto>> getUsers(@ModelAttribute @Valid UsersDtoGetParam usersDtoGetParam) {
@@ -44,5 +44,18 @@ public class UserController {
         return ResponseEntity
                 .status(HttpStatus.NO_CONTENT)
                 .body("Пользователь c id: " + userId + " удален");
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<Void> checkUser(@RequestBody @NotNull Long userId) {
+        if (userService.checkUser(userId)) {
+            return ResponseEntity.status(HttpStatus.OK).build();
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
+
+    @GetMapping
+    public ResponseEntity<UserShortDto> getUser(@RequestBody @NotNull Long userId) {
+        return ResponseEntity.ok(userService.getUserById(userId));
     }
 }

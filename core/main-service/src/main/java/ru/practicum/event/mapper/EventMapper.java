@@ -3,6 +3,7 @@ package ru.practicum.event.mapper;
 import org.mapstruct.*;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.model.Event;
+import ru.practicum.user.dto.UserShortDto;
 
 import java.util.List;
 
@@ -10,9 +11,16 @@ import java.util.List;
 @Mapper(componentModel = "spring", uses = {LocationMapper.class})
 public interface EventMapper {
     //target - поле на выходе, source на входе
+    @Mapping(target = "initiator", ignore = true)
     EventShortDto toEventShortDto(Event event);
 
+    @Mapping(target = "initiator", ignore = true)
     EventFullDto toEventFullDto(Event event);
+
+    @Mapping(source = "event", target = ".")
+    @Mapping(target = "initiator", source = "userShortDto")
+    @Mapping(target = "id", source = "event.id")
+    EventFullDto toEventFullDto(Event event, UserShortDto userShortDto);
 
     @Mapping(target = "category.id", source = "category")
     @Mapping(target = "createdOn", expression = "java(java.time.LocalDateTime.now())")

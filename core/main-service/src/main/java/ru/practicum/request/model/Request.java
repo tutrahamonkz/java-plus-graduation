@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import ru.practicum.event.model.Event;
-import ru.practicum.user.model.User;
 
 import java.time.LocalDateTime;
 
@@ -19,20 +18,19 @@ import java.time.LocalDateTime;
 public class Request {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
+    private Long id;
 
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
-    RequestStatus status;
+    private RequestStatus status;
 
     @Column(name = "created", nullable = false)
-    LocalDateTime created;
+    private LocalDateTime created;
 
-    @ManyToOne
-    @JoinColumn(name = "requester_id", nullable = false)
-    User requester;
+    @Column(name = "requester_id", nullable = false)
+    private Long requester;
 
     @ManyToOne
     @JoinColumn(name = "event_id", nullable = false)
-    Event event;
+    private Event event;
 }

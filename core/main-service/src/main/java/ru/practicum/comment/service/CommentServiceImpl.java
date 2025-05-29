@@ -2,6 +2,7 @@ package ru.practicum.comment.service;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.comment.dto.CommentDto;
@@ -11,8 +12,8 @@ import ru.practicum.comment.repository.CommentRepository;
 import ru.practicum.event.model.Event;
 import ru.practicum.event.service.EventService;
 import ru.practicum.exception.NotFoundException;
-import ru.practicum.user.model.User;
-import ru.practicum.user.service.UserService;
+import ru.practicum.user.client.UserClient;
+import ru.practicum.user.dto.UserShortDto;
 
 import java.util.List;
 
@@ -24,7 +25,7 @@ public class CommentServiceImpl implements CommentService {
 
     private final CommentRepository commentRepository;
     private final EventService eventService;
-    private final UserService userService;
+    private final UserClient userClient;
 
     @Override
     public List<CommentDto> getComments(Long eventId) {
@@ -39,13 +40,13 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentDto createComment(Long userId, CommentDto commentDto) {
-        User user = userService.getUserById(userId);
+        UserShortDto user = userClient.getUser(userId).getBody();
         Event event = eventService.getPublicEventById(commentDto.getEventId());
         Comment comment = CommentMapper.INSTANCE.toEntity(commentDto);
-        comment.setUser(user);
+        comment.setUser(userId);
         comment.setEvent(event);
         log.info("Create comment: {}", comment);
-        return CommentMapper.INSTANCE.toDto(commentRepository.save(comment));
+        return CommentMapper.INSTANCE.toDto(commentRepository.save(comment), user);
     }
 
     @Override
@@ -60,19 +61,19 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentDto updateComment(Long userId, CommentDto commentDto) {
-        User user = userService.getUserById(userId);
+        checkUser(userId);
         Event event = eventService.getPublicEventById(commentDto.getEventId());
         Comment comment = getCommentById(commentDto.getId());
         CommentMapper.INSTANCE.updateDto(commentDto, comment);
         log.info("Update comment: {}", comment);
-        comment.setUser(user);
+        comment.setUser(userId);
         comment.setEvent(event);
         return CommentMapper.INSTANCE.toDto(commentRepository.save(comment));
     }
 
     @Override
     public void deleteComment(Long userId, Long commentId) {
-        userService.getUserById(userId);
+        checkUser(userId);
         if (commentRepository.existsById(commentId)) {
             log.info("Delete comment: {}", commentId);
             commentRepository.deleteById(commentId);
@@ -93,7 +94,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentDto getComment(Long userId, Long commentId) {
-        userService.getUserById(userId);
+        checkUser(userId);
         log.info("Get comment by id: {}", commentId);
         return CommentMapper.INSTANCE.toDto(getCommentById(commentId));
     }
@@ -105,12 +106,12 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentDto createReply(Long userId, Long parentCommentId, CommentDto commentDto) {
-        User user = userService.getUserById(userId);
+        checkUser(userId);
         Comment parentComment = commentRepository.findById(parentCommentId)
                 .orElseThrow(() -> new NotFoundException("Parent comment not found: " + parentCommentId));
 
         Comment comment = CommentMapper.INSTANCE.toEntity(commentDto);
-        comment.setUser(user);
+        comment.setUser(userId);
         comment.setEvent(parentComment.getEvent());
         comment.setParentComment(parentComment);
 
@@ -124,4 +125,9 @@ public class CommentServiceImpl implements CommentService {
         return CommentMapper.INSTANCE.toDtos(commentRepository.findAllByParentCommentId(commentId));
     }
 
-   }
+    private void checkUser(Long userId) {
+        if (userClient.checkUser(userId).getStatusCode() == HttpStatus.NOT_FOUND) {
+            throw new NotFoundException("Не найден пользователь с id: " + userId);
+        }
+    }
+}

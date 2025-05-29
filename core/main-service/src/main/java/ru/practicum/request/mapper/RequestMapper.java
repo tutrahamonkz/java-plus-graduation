@@ -10,7 +10,7 @@ import java.util.List;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface RequestMapper {
-    @Mapping(source = "requester.id", target = "requester")
+    @Mapping(source = "requester", target = "requester")
     @Mapping(source = "event.id", target = "event")
     ParticipationRequestDto toDto(Request request);
 
