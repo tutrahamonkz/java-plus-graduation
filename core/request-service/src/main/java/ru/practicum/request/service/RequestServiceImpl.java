@@ -3,19 +3,18 @@ package ru.practicum.request.service;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import ru.practicum.event.model.Event;
-import ru.practicum.event.model.State;
-import ru.practicum.event.repository.EventRepository;
+import ru.practicum.event.client.EventClient;
+import ru.practicum.event.dto.EventDtoGetParam;
+import ru.practicum.event.dto.EventFullDto;
+import ru.practicum.event.dto.State;
 import ru.practicum.exception.ConditionsNotMetException;
 import ru.practicum.exception.NotFoundException;
-import ru.practicum.request.dto.EventRequestStatusUpdateRequest;
-import ru.practicum.request.dto.EventRequestStatusUpdateResult;
-import ru.practicum.request.dto.ParticipationRequestDto;
+import ru.practicum.request.dto.*;
 import ru.practicum.request.mapper.RequestMapper;
 import ru.practicum.request.model.Request;
-import ru.practicum.request.model.RequestStatus;
 import ru.practicum.request.repository.RequestRepository;
 import ru.practicum.user.client.UserClient;
 
@@ -27,42 +26,39 @@ import java.util.List;
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
+@Slf4j
 public class RequestServiceImpl implements RequestService {
     private final UserClient userClient;
-    private final EventRepository eventRepository;
+    private final EventClient eventClient;
     private final RequestRepository requestRepository;
     private final RequestMapper requestMapper;
 
     @Override
     public ParticipationRequestDto createParticipationRequest(long userId, long eventId) {
-        Event event = eventRepository.findById(eventId).orElseThrow(
-                () -> new NotFoundException(String.format("Событие с id=%d не найдено", eventId))
-        );
+
+        EventFullDto event = getEventFullDto(eventId);
 
         if (!event.getState().equals(State.PUBLISHED)) {
             throw new ConditionsNotMetException("Нельзя участвовать в неопубликованном событии");
         }
 
-        if (event.getInitiator().equals(userId)) {
+        if (event.getInitiator().getId().equals(userId)) {
             throw new ConditionsNotMetException("Инициатор события не может добавить запрос на участие в своём событии");
         }
 
         checkParticipantLimit(event.getParticipantLimit(), getConfirmedRequests(eventId));
 
-
-        if (userClient.getUser(userId).getBody() == null) {
-            throw new NotFoundException("Не найден пользователь с id: " + userId);
-        }
+        checkUser(userId);
 
         RequestStatus status = RequestStatus.PENDING;
         if (event.getParticipantLimit() == 0) {
             status = RequestStatus.CONFIRMED;
-        } else if (!event.getRequestModeration()) {
+        } else if (!event.isRequestModeration()) {
             status = RequestStatus.CONFIRMED;
         }
 
         Request request = Request.builder()
-                .event(event)
+                .event(event.getId())
                 .requester(userId)
                 .status(status)
                 .created(LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS))
@@ -74,26 +70,50 @@ public class RequestServiceImpl implements RequestService {
             throw new ConditionsNotMetException("Нельзя добавить повторный запрос на участие в событии");
         }
 
+        log.info("Создан запрос на участие в событии c id: {}, пользователем с id: {}", eventId, userId);
         return requestMapper.toDto(request);
     }
 
     @Override
     public List<ParticipationRequestDto> getAllByParticipantId(long userId) {
+        log.info("Получение списка событий по id пользователя: {}", userId);
         List<Request> foundRequests = requestRepository.findAllByRequester(userId);
         return requestMapper.toDtoList(foundRequests);
     }
 
     @Override
-    public List<ParticipationRequestDto> getAllByInitiatorIdAndEventId(long userId, long eventId) {
-        List<Request> foundRequests = requestRepository.findAllByInitiatorAndEventId(userId, eventId);
-        return requestMapper.toDtoList(foundRequests);
+    public ParticipationRequestDto cancelParticipantRequest(long userId, long requestId) {
+        log.info("Отмена регистрации в событии с id: {}, пользователем с id: {}", requestId, userId);
+        Request request = requestRepository.findById(requestId).orElseThrow(
+                () -> new NotFoundException(String.format("Запрос на участие в событии с id запроса=%d не найден", requestId))
+        );
+
+        Long requesterId = request.getRequester();
+        if (!requesterId.equals(userId)) {
+            throw new ConditionsNotMetException("Пользователь не является участником в запросе на участие в событии");
+        }
+
+        request.setStatus(RequestStatus.CANCELED);
+        requestRepository.save(request);
+
+        return requestMapper.toDto(request);
     }
 
     @Override
-    public EventRequestStatusUpdateResult changeEventRequestsStatusByInitiator(EventRequestStatusUpdateRequest updateRequest, long userId, long eventId) {
-        Event event = eventRepository.findById(eventId).orElseThrow(
-                () -> new NotFoundException(String.format("Событие с id=%d не найдено", eventId))
-        );
+    public List<ParticipationRequestDto> getAllByEventId(long eventId, long userId) {
+        log.info("Получение всех заявок для события с id: {}, пользователем с id: {}", eventId, userId);
+        checkUser(userId);
+        return requestMapper.toDtoList(requestRepository.findAllByEvent(eventId));
+    }
+
+    @Override
+    public EventRequestStatusUpdateResult changeEventRequestsStatusByInitiator(Long userId,
+                                                                               RequestStatusUpdateDto updateDto) {
+
+        checkUser(userId);
+
+        EventRequestStatusUpdateRequest updateRequest = updateDto.getUpdateRequest();
+        EventFullDto event = updateDto.getEvent();
 
         List<Long> requestIds = updateRequest.getRequestIds();
         List<Request> foundRequests = requestRepository.findAllById(requestIds);
@@ -118,41 +138,14 @@ public class RequestServiceImpl implements RequestService {
         return result;
     }
 
-    @Override
-    public ParticipationRequestDto cancelParticipantRequest(long userId, long requestId) {
-        Request request = requestRepository.findById(requestId).orElseThrow(
-                () -> new NotFoundException(String.format("Запрос на участие в событии с id запроса=%d не найден", requestId))
-        );
-
-        Long requesterId = request.getRequester();
-        if (!requesterId.equals(userId)) {
-            throw new ConditionsNotMetException("Пользователь не является участником в запросе на участие в событии");
-        }
-
-        request.setStatus(RequestStatus.CANCELED);
-        requestRepository.save(request);
-
-        return requestMapper.toDto(request);
-    }
-
-    private void checkParticipantLimit(int participantLimit, int confirmedRequests) {
-        if (confirmedRequests >= participantLimit && participantLimit != 0) {
-            throw new ConditionsNotMetException("У события заполнен лимит участников");
-        }
-    }
-
-    private int getConfirmedRequests(long eventId) {
-        return requestRepository.findCountOfConfirmedRequestsByEventId(eventId);
-    }
-
     private void updateStatus(RequestStatus status, List<Long> ids) {
         requestRepository.updateStatus(status, ids);
     }
 
-    private void handleConfirmedRequests(Event event, List<Request> foundRequests, EventRequestStatusUpdateResult result, List<ParticipationRequestDto> confirmed, List<ParticipationRequestDto> rejected) {
+    private void handleConfirmedRequests(EventFullDto event, List<Request> foundRequests, EventRequestStatusUpdateResult result, List<ParticipationRequestDto> confirmed, List<ParticipationRequestDto> rejected) {
         int confirmedRequests = getConfirmedRequests(event.getId());
         int participantLimit = event.getParticipantLimit();
-        if (participantLimit == 0 || !event.getRequestModeration()) {
+        if (participantLimit == 0 || !event.isRequestModeration()) {
             result.setConfirmedRequests(requestMapper.toDtoList(foundRequests));
             return;
         }
@@ -170,12 +163,50 @@ public class RequestServiceImpl implements RequestService {
         updateStatus(RequestStatus.CONFIRMED, confirmedRequestIds);
     }
 
-    private void handleRejectedRequests(List<Request> foundRequests, EventRequestStatusUpdateResult result, List<ParticipationRequestDto> rejected) {
+    private void handleRejectedRequests(List<Request> foundRequests, EventRequestStatusUpdateResult result,
+                                        List<ParticipationRequestDto> rejected) {
         for (Request request : foundRequests) {
             request.setStatus(RequestStatus.REJECTED);
             rejected.add(requestMapper.toDto(request));
         }
         List<Long> rejectedRequestIds = rejected.stream().map(ParticipationRequestDto::getId).toList();
         updateStatus(RequestStatus.REJECTED, rejectedRequestIds);
+    }
+
+    private void checkParticipantLimit(int participantLimit, int confirmedRequests) {
+        if (confirmedRequests >= participantLimit && participantLimit != 0) {
+            throw new ConditionsNotMetException("У события заполнен лимит участников");
+        }
+    }
+
+    private int getConfirmedRequests(long eventId) {
+        return requestRepository.findCountOfConfirmedRequestsByEventId(eventId);
+    }
+
+    private EventFullDto getEventFullDto(Long userId, Long eventId) {
+        EventDtoGetParam eventDtoGetParam = new EventDtoGetParam();
+        eventDtoGetParam.setUserId(userId);
+        eventDtoGetParam.setEventId(eventId);
+
+        EventFullDto event = eventClient.getEventForUserById(userId, eventId, eventDtoGetParam);
+
+        if (event == null) {
+            throw new NotFoundException(String.format("Событие с id=%d не найдено", eventId));
+        }
+        return event;
+    }
+
+    private EventFullDto getEventFullDto(Long eventId) {
+        EventFullDto dto = eventClient.getPublicEventById(eventId);
+        if (dto == null) {
+            throw new NotFoundException(String.format("Событие с id=%d не найдено", eventId));
+        }
+        return dto;
+    }
+
+    private void checkUser(Long userId) {
+        if (userClient.getUser(userId).getBody() == null) {
+            throw new NotFoundException("Не найден пользователь с id: " + userId);
+        }
     }
 }

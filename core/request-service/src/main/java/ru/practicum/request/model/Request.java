@@ -3,7 +3,7 @@ package ru.practicum.request.model;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import ru.practicum.event.model.Event;
+import ru.practicum.request.dto.RequestStatus;
 
 import java.time.LocalDateTime;
 
@@ -30,7 +30,6 @@ public class Request {
     @Column(name = "requester_id", nullable = false)
     private Long requester;
 
-    @ManyToOne
-    @JoinColumn(name = "event_id", nullable = false)
-    private Event event;
+    @Column(name = "event_id", nullable = false)
+    private Long event;
 }

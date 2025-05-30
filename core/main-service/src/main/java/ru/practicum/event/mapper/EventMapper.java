@@ -3,7 +3,6 @@ package ru.practicum.event.mapper;
 import org.mapstruct.*;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.model.Event;
-import ru.practicum.user.dto.UserShortDto;
 
 import java.util.List;
 
@@ -17,14 +16,9 @@ public interface EventMapper {
     @Mapping(target = "initiator", ignore = true)
     EventFullDto toEventFullDto(Event event);
 
-    @Mapping(source = "event", target = ".")
-    @Mapping(target = "initiator", source = "userShortDto")
-    @Mapping(target = "id", source = "event.id")
-    EventFullDto toEventFullDto(Event event, UserShortDto userShortDto);
-
     @Mapping(target = "category.id", source = "category")
     @Mapping(target = "createdOn", expression = "java(java.time.LocalDateTime.now())")
-    @Mapping(target = "state", expression = "java(ru.practicum.event.model.State.PENDING)")
+    @Mapping(target = "state", expression = "java(ru.practicum.event.dto.State.PENDING)")
     @Mapping(target = "participantLimit", source = "participantLimit", defaultValue = "0")
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "initiator", ignore = true)

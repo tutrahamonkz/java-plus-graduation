@@ -13,15 +13,24 @@ import ru.practicum.category.service.CategoryService;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.mapper.EventMapper;
 import ru.practicum.event.mapper.LocationMapper;
-import ru.practicum.event.model.*;
+import ru.practicum.event.model.Event;
+import ru.practicum.event.model.Location;
+import ru.practicum.event.model.QEvent;
 import ru.practicum.event.repository.EventRepository;
 import ru.practicum.exception.ConflictStateException;
 import ru.practicum.exception.ConflictTimeException;
 import ru.practicum.exception.NotFoundException;
 import ru.practicum.exception.ValidationException;
+import ru.practicum.request.client.RequestClient;
+import ru.practicum.request.dto.EventRequestStatusUpdateRequest;
+import ru.practicum.request.dto.EventRequestStatusUpdateResult;
+import ru.practicum.request.dto.ParticipationRequestDto;
+import ru.practicum.request.dto.RequestStatusUpdateDto;
 import ru.practicum.user.client.UserClient;
+import ru.practicum.user.dto.UserShortDto;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -37,6 +46,7 @@ public class EventServiceImpl implements EventService {
     private final EventMapper mp;
     private final LocationMapper lmp;
     private final QEvent event = QEvent.event;
+    private final RequestClient requestClient;
     private final UserClient userClient;
 
     @Transactional
@@ -46,7 +56,8 @@ public class EventServiceImpl implements EventService {
         ev.setCategory(categoryService.getCategory(ev.getCategory().getId()));
         ev.setInitiator(userId);
         log.info("Создание события {}", ev);
-        return mp.toEventFullDto(eventRepository.save(ev));
+        Event savedEvent = eventRepository.save(ev);
+        return addUserShortDtoToFullDto(savedEvent, userId);
     }
 
     @Override
@@ -55,7 +66,11 @@ public class EventServiceImpl implements EventService {
         Predicate predicate = event.initiator.eq(prm.getUserId());
         PageRequest pageRequest = PageRequest.of(prm.getFrom(), prm.getSize());
         List<Event> events = eventRepository.findAll(predicate, pageRequest).getContent();
-        return mp.toEventShortDto(events);
+        List<EventShortDto> dtos = new ArrayList<>();
+        for (Event ev : events) {
+            dtos.add(addUserShortDtoToShortDto(ev, ev.getInitiator()));
+        }
+        return dtos;
     }
 
     @Override
@@ -67,7 +82,7 @@ public class EventServiceImpl implements EventService {
                         String.format("Событие с id %d для пользователя с id %d не найдено.",
                                 prm.getEventId(), prm.getUserId())));
         log.info("Получение события с id {}  для пользователя с id {}", prm.getEventId(), prm.getUserId());
-        return mp.toEventFullDto(ev);
+        return addUserShortDtoToFullDto(ev, prm.getUserId());
     }
 
     @Override
@@ -95,7 +110,11 @@ public class EventServiceImpl implements EventService {
                 ? eventRepository.findAll(pageRequest).getContent()
                 : eventRepository.findAll(predicate, pageRequest).getContent();
         log.info("Получение списка событий администратором с параметрами {} и предикатом {}", prm, predicate);
-        return mp.toEventFullDto(events);
+        List<EventFullDto> dtos = new ArrayList<>();
+        for (Event ev : events) {
+            dtos.add(addUserShortDtoToFullDto(ev, ev.getInitiator()));
+        }
+        return dtos;
     }
 
     @Override
@@ -119,7 +138,8 @@ public class EventServiceImpl implements EventService {
         mp.updateFromAdmin(rq, ev);
         ev.setState(rq.getStateAction() == StateAction.PUBLISH_EVENT ? State.PUBLISHED : State.CANCELED);
         log.info("Обновление события с id {} администратором с параметрами {}", id, rq);
-        return mp.toEventFullDto(eventRepository.save(ev));
+        Event savedEvent = eventRepository.save(ev);
+        return addUserShortDtoToFullDto(savedEvent, savedEvent.getInitiator());
     }
 
     @Override
@@ -128,9 +148,7 @@ public class EventServiceImpl implements EventService {
         if (rq.getEventDate() != null && rq.getEventDate().isBefore(LocalDateTime.now().plusHours(2L))) {
             throw new ConflictTimeException("Время не может быть раньше, через два часа от текущего момента");
         }
-        Event ev = eventRepository.findByIdAndInitiator(eventId, userId)
-                .orElseThrow(() -> new NotFoundException(
-                        String.format("Событие с id %d для пользователя с id %d не найдено.", eventId, userId)));
+        Event ev = findByIdAndInitiator(eventId, userId);
         if (ev.getState() == State.PUBLISHED) {
             throw new ConflictStateException("Изменить можно только неопубликованное событие");
         }
@@ -145,7 +163,8 @@ public class EventServiceImpl implements EventService {
             ev.setLocation(locationService.getLocation(lmp.toLocation(rq.getLocation())));
         }
         mp.updateFromUser(rq, ev);
-        return mp.toEventFullDto(eventRepository.save(ev));
+        Event savedEvent = eventRepository.save(ev);
+        return addUserShortDtoToFullDto(savedEvent, savedEvent.getInitiator());
     }
 
     @Override
@@ -185,7 +204,11 @@ public class EventServiceImpl implements EventService {
         if (!events.isEmpty()) {
             viewService.saveViews(events, rqt);
         }
-        return mp.toEventShortDto(events);
+        List<EventShortDto> dtos = new ArrayList<>();
+        for (Event ev : events) {
+            dtos.add(addUserShortDtoToShortDto(ev, ev.getInitiator()));
+        }
+        return dtos;
     }
 
     @Override
@@ -196,7 +219,7 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new NotFoundException(
                         String.format("Событие с id %d не найдено.", id)));
         viewService.saveView(ev, rqt);
-        return mp.toEventFullDto(ev);
+        return addUserShortDtoToFullDto(ev, ev.getInitiator());
     }
 
     @Override
@@ -210,10 +233,48 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new NotFoundException("Не найдено события с id: " + id));
     }
 
+    @Override
+    public List<ParticipationRequestDto> getAllByInitiatorIdAndEventId(long userId, long eventId) {
+        findByIdAndInitiator(eventId, userId);
+        return requestClient.getAllByEventId(userId, eventId);
+    }
+
+    @Override
+    public EventRequestStatusUpdateResult changeEventRequestsStatusByInitiator(EventRequestStatusUpdateRequest updateRequest,
+                                                                               long userId, long eventId) {
+        log.info("Смена статусов запросов для события: {}, пользователем: {}", eventId, userId);
+        EventFullDto eventFullDto = addUserShortDtoToFullDto(findByIdAndInitiator(eventId, userId), userId);
+        RequestStatusUpdateDto dto = RequestStatusUpdateDto.builder()
+                .updateRequest(updateRequest)
+                .event(eventFullDto)
+                .build();
+        return requestClient.updateRequestStatus(userId, dto);
+    }
+
     private void dateValid(LocalDateTime start, LocalDateTime end) {
         if (start.isAfter(end)) {
             throw new ValidationException("Дата начала события позже даты окончания");
         }
+    }
+
+    private Event findByIdAndInitiator(Long eventId, Long initiatorId) {
+        return eventRepository.findByIdAndInitiator(eventId, initiatorId)
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Событие с id %d для пользователя с id %d не найдено.", eventId, initiatorId)));
+    }
+
+    private EventFullDto addUserShortDtoToFullDto(Event event, Long userId) {
+        EventFullDto dto = mp.toEventFullDto(event);
+        UserShortDto userDto = userClient.getUser(userId).getBody();
+        dto.setInitiator(userDto);
+        return dto;
+    }
+
+    private EventShortDto addUserShortDtoToShortDto(Event event, Long userId) {
+        EventShortDto dto = mp.toEventShortDto(event);
+        UserShortDto userDto = userClient.getUser(userId).getBody();
+        dto.setInitiator(userDto);
+        return dto;
     }
 }
 
