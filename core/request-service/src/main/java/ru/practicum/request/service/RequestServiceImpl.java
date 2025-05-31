@@ -35,6 +35,8 @@ public class RequestServiceImpl implements RequestService {
     @Override
     public ParticipationRequestDto createParticipationRequest(long userId, long eventId) {
 
+        log.info("Создание запроса на участие для пользователя {} и события {}", userId, eventId);
+
         EventFullDto event = getEventFullDto(eventId);
 
         if (!event.getState().equals(State.PUBLISHED)) {
@@ -108,6 +110,7 @@ public class RequestServiceImpl implements RequestService {
     @Override
     public EventRequestStatusUpdateResult changeEventRequestsStatusByInitiator(Long userId,
                                                                                RequestStatusUpdateDto updateDto) {
+        log.info("Изменение статуса запросов на события по инициаторам {}", userId);
 
         checkUser(userId);
 
@@ -138,6 +141,7 @@ public class RequestServiceImpl implements RequestService {
     }
 
     private void updateStatus(RequestStatus status, List<Long> ids) {
+        log.info("Обновление статуса на: {}, для запросов: {}", status, ids);
         requestRepository.updateStatus(status, ids);
     }
 

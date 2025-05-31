@@ -6,7 +6,7 @@ stats-server:
 
 spring:
   application:
-    name: user-service
+    name: event-service
   jpa:
     hibernate:
       ddl-auto: none
@@ -21,6 +21,10 @@ spring:
     url: jdbc:postgresql://localhost:6543/main
     username: main
     password: main
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
 
 logging:
   level:

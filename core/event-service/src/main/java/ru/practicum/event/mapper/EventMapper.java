@@ -29,8 +29,6 @@ public interface EventMapper {
 
     List<EventShortDto> toEventShortDto(List<Event> events);
 
-    List<EventFullDto> toEventFullDto(List<Event> events);
-
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)//игнорирование полей c null
     @Mapping(target = "category.id", source = "category")
     @Mapping(target = "id", ignore = true)

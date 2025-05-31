@@ -1,6 +1,9 @@
 server:
   port: 0
 
+stats-server:
+  name: stats-server
+
 spring:
   application:
     name: request-service
