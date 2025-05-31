@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import ru.practicum.event.client.EventClient;
-import ru.practicum.event.dto.EventDtoGetParam;
 import ru.practicum.event.dto.EventFullDto;
 import ru.practicum.event.dto.State;
 import ru.practicum.exception.ConditionsNotMetException;
@@ -28,10 +27,10 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class RequestServiceImpl implements RequestService {
-    private final UserClient userClient;
-    private final EventClient eventClient;
-    private final RequestRepository requestRepository;
-    private final RequestMapper requestMapper;
+    UserClient userClient;
+    EventClient eventClient;
+    RequestRepository requestRepository;
+    RequestMapper requestMapper;
 
     @Override
     public ParticipationRequestDto createParticipationRequest(long userId, long eventId) {
@@ -181,19 +180,6 @@ public class RequestServiceImpl implements RequestService {
 
     private int getConfirmedRequests(long eventId) {
         return requestRepository.findCountOfConfirmedRequestsByEventId(eventId);
-    }
-
-    private EventFullDto getEventFullDto(Long userId, Long eventId) {
-        EventDtoGetParam eventDtoGetParam = new EventDtoGetParam();
-        eventDtoGetParam.setUserId(userId);
-        eventDtoGetParam.setEventId(eventId);
-
-        EventFullDto event = eventClient.getEventForUserById(userId, eventId, eventDtoGetParam);
-
-        if (event == null) {
-            throw new NotFoundException(String.format("Событие с id=%d не найдено", eventId));
-        }
-        return event;
     }
 
     private EventFullDto getEventFullDto(Long eventId) {

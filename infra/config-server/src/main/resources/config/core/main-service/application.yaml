@@ -21,6 +21,10 @@ spring:
     url: jdbc:postgresql://localhost:6543/main
     username: main
     password: main
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
 
 logging:
   level:

@@ -10,7 +10,7 @@ import ru.practicum.request.dto.RequestStatusUpdateDto;
 
 import java.util.List;
 
-@FeignClient(name = "request-service", path = "/users")
+@FeignClient(name = "request-service", path = "/users", fallbackFactory = RequestClientFallbackFactory.class)
 public interface RequestClient {
 
     @PostMapping("/{userId}/requests")

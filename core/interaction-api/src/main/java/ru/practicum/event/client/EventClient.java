@@ -9,7 +9,7 @@ import ru.practicum.event.dto.*;
 
 import java.util.List;
 
-@FeignClient(name = "main-service")
+@FeignClient(name = "main-service", fallbackFactory = EventClientFallbackFactory.class)
 public interface EventClient {
 
     @GetMapping("/admin/events")
