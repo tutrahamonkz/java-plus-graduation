@@ -25,21 +25,32 @@ import ru.practicum.dto.StatsDto;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @Slf4j
 public class StatClient {
     private final DiscoveryClient discoveryClient;
     private final String serverId;
+    private final ScheduledExecutorService scheduler;
     private RestClient restClient;
 
     @Autowired
     public StatClient(@Value("${stats-server.name}") String serverId, DiscoveryClient discoveryClient) {
         this.discoveryClient = discoveryClient;
         this.serverId = serverId;
+        this.scheduler = Executors.newScheduledThreadPool(1);
     }
 
     public ResponseEntity<Void> hit(@Valid HitDto hitDto) { //Сохранение информации о том, что на uri конкретного сервиса был отправлен запрос пользователем с ip
+        if (restClient == null) {
+            log.warn("Сервис статистики пока недоступен. Запрос не отправлен.");
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+
         try {
             ResponseEntity<Void> response = restClient.post()
                     .uri("/hit")
@@ -56,6 +67,11 @@ public class StatClient {
     }
 
     public ResponseEntity<List<StatsDto>> getStats(String start, String end, List<String> uris, boolean unique) { // Получение статистики по посещениям.
+        if (restClient == null) {
+            log.warn("Сервис статистики пока недоступен. Запрос не отправлен.");
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+
         try {
             ResponseEntity<List<StatsDto>> response = restClient.get()
                     .uri(buildStatsUri(start, end, uris, unique))
@@ -109,18 +125,24 @@ public class StatClient {
     }
 
     private String makeURI() {
-        ServiceInstance instance = createRetryTemplate().execute(cxt -> getInstance(serverId));
-        String uri = "http://" + instance.getHost() + ":" + instance.getPort();
-        log.info("URL Сервера статистики найден: {}", uri);
-        return uri;
+        try {
+            ServiceInstance instance = createRetryTemplate().execute(cxt -> getInstance(serverId));
+            String uri = "http://" + instance.getHost() + ":" + instance.getPort();
+            log.info("URL Сервера статистики найден: {}", uri);
+            return uri;
+        } catch (Exception e) {
+            log.warn("Сервис статистики пока недоступен. Повторное подключение через минуту.");
+            return null;
+        }
     }
 
-    // Инициализирует stats-client после запуска приложения, иначе сервис использующий клиент некорректно
-    // регистрируется в eureka
-    @EventListener(ApplicationReadyEvent.class)
     private void setupStatsClient() {
-        if (restClient == null) {
-            restClient = RestClient.create(makeURI());
-        }
+        restClient = RestClient.create(Objects.requireNonNull(makeURI()));
+    }
+
+    // Если stats-server недоступен пробуем подключиться снова через минуту
+    @EventListener(ApplicationReadyEvent.class)
+    private void startMonitoring() {
+        scheduler.scheduleAtFixedRate(this::setupStatsClient, 1, 60, TimeUnit.SECONDS);
     }
 }
