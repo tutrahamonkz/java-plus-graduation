@@ -4,10 +4,8 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
-import org.springframework.context.event.EventListener;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -25,33 +23,23 @@ import ru.practicum.dto.StatsDto;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 @Component
 @Slf4j
 public class StatClient {
     private final DiscoveryClient discoveryClient;
-    private final String serverId;
-    private final ScheduledExecutorService scheduler;
     private RestClient restClient;
+    private final String serverId;
 
     @Autowired
     public StatClient(@Value("${stats-server.name}") String serverId, DiscoveryClient discoveryClient) {
         this.discoveryClient = discoveryClient;
         this.serverId = serverId;
-        this.scheduler = Executors.newScheduledThreadPool(1);
     }
 
     public ResponseEntity<Void> hit(@Valid HitDto hitDto) { //Сохранение информации о том, что на uri конкретного сервиса был отправлен запрос пользователем с ip
-        if (restClient == null) {
-            log.warn("Сервис статистики пока недоступен. Запрос не отправлен.");
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
-        }
-
         try {
+            initializeStatsClient(serverId);
             ResponseEntity<Void> response = restClient.post()
                     .uri("/hit")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -67,12 +55,8 @@ public class StatClient {
     }
 
     public ResponseEntity<List<StatsDto>> getStats(String start, String end, List<String> uris, boolean unique) { // Получение статистики по посещениям.
-        if (restClient == null) {
-            log.warn("Сервис статистики пока недоступен. Запрос не отправлен.");
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
-        }
-
         try {
+            initializeStatsClient(serverId);
             ResponseEntity<List<StatsDto>> response = restClient.get()
                     .uri(buildStatsUri(start, end, uris, unique))
                     .retrieve()
@@ -95,6 +79,12 @@ public class StatClient {
                 .queryParam("uris", uris)
                 .queryParam("unique", unique);
         return uriBuilder.toUriString();
+    }
+
+    private synchronized void initializeStatsClient(String serviceId) {
+        if (restClient == null) {
+            restClient = RestClient.create(makeURI(serviceId));
+        }
     }
 
     private ServiceInstance getInstance(String serviceId) {
@@ -124,25 +114,9 @@ public class StatClient {
         return retryTemplate;
     }
 
-    private String makeURI() {
-        try {
-            ServiceInstance instance = createRetryTemplate().execute(cxt -> getInstance(serverId));
-            String uri = "http://" + instance.getHost() + ":" + instance.getPort();
-            log.info("URL Сервера статистики найден: {}", uri);
-            return uri;
-        } catch (Exception e) {
-            log.warn("Сервис статистики пока недоступен. Повторное подключение через минуту.");
-            return null;
-        }
-    }
-
-    private void setupStatsClient() {
-        restClient = RestClient.create(Objects.requireNonNull(makeURI()));
-    }
-
-    // Если stats-server недоступен пробуем подключиться снова через минуту
-    @EventListener(ApplicationReadyEvent.class)
-    private void startMonitoring() {
-        scheduler.scheduleAtFixedRate(this::setupStatsClient, 1, 60, TimeUnit.SECONDS);
+    private String makeURI(String serviceId) {
+        log.info("Получаем url stats-client");
+        ServiceInstance instance = createRetryTemplate().execute(cxt -> getInstance(serviceId));
+        return "http://" + instance.getHost() + ":" + instance.getPort();
     }
 }
