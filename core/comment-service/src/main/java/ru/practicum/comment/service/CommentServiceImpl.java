@@ -29,7 +29,8 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public List<CommentDto> getComments(Long eventId) {
         log.info("Get comments by eventId: {}", eventId);
-        eventClient.getPublicEventById(eventId);
+        eventClient.getEvent(eventId);
+
         List<CommentDto> dtos = CommentMapper.INSTANCE.toDtos(commentRepository.findAllByEvent(eventId));
         return dtos.stream()
                 // Избегаем дублирования комментариев в ответе
@@ -40,7 +41,7 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public CommentDto createComment(Long userId, CommentDto commentDto) {
         UserShortDto user = userClient.getUser(userId).getBody();
-        EventFullDto event = eventClient.getPublicEventById(commentDto.getEventId());
+        EventFullDto event = eventClient.getEvent(commentDto.getEventId());
         Comment comment = CommentMapper.INSTANCE.toEntity(commentDto);
         comment.setUser(userId);
         comment.setEvent(event.getId());
@@ -50,7 +51,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentDto updateComment(CommentDto commentDto) {
-        EventFullDto event = eventClient.getPublicEventById(commentDto.getEventId());
+        EventFullDto event = eventClient.getEvent(commentDto.getEventId());
         Comment comment = getCommentById(commentDto.getId());
         CommentMapper.INSTANCE.updateDto(commentDto, comment);
         log.info("Admin update comment: {}", comment);
@@ -61,7 +62,7 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public CommentDto updateComment(Long userId, CommentDto commentDto) {
         getUser(userId);
-        EventFullDto event = eventClient.getPublicEventById(commentDto.getEventId());
+        EventFullDto event = eventClient.getEvent(commentDto.getEventId());
         Comment comment = getCommentById(commentDto.getId());
         CommentMapper.INSTANCE.updateDto(commentDto, comment);
         log.info("Update comment: {}", comment);
@@ -115,7 +116,11 @@ public class CommentServiceImpl implements CommentService {
         comment.setParentComment(parentComment);
 
         log.info("Create reply to comment: {}", comment);
-        return CommentMapper.INSTANCE.toDto(commentRepository.save(comment));
+
+        CommentDto dto = CommentMapper.INSTANCE.toDto(commentRepository.save(comment));
+        dto.setUser(userClient.getUser(userId).getBody());
+
+        return dto;
     }
 
     @Override

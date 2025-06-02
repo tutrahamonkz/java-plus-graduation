@@ -20,14 +20,14 @@ spring:
           uri: lb://request-service
           predicates:
             - Path=/users/*/requests/**
+        - id: comment_service_route
+          uri: lb://comment-service
+          predicates:
+            - Path=/admin/comments/**, /users/*/comments/**, /comments/**
         - id: event_service_route
           uri: lb://event-service
           predicates:
             - Path=/admin/events/**, /users/*/events/**, /events/**, /admin/categories/**, /categories/**, /admin/compilations/**, /compilations/**
-        - id: comment_service_route
-          uri: lb://comment-service
-          predicates:
-            - Path=/admin/comments/**, /users/{userId}/comments/**, /events/{eventId}/comments/**
 
 logging:
   level:

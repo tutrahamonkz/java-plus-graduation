@@ -11,7 +11,7 @@ import ru.practicum.user.dto.UsersDtoGetParam;
 
 import java.util.List;
 
-@FeignClient(name = "user-service", path = "/admin/users")
+@FeignClient(name = "user-service", path = "/admin/users", fallbackFactory = UserClientFallbackFactory.class)
 public interface UserClient {
 
     @GetMapping

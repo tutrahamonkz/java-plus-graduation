@@ -28,4 +28,9 @@ public class AdminEventController {
                                     @RequestBody @Valid UpdateEventAdminRequest rq) {
         return eventService.updateEventByAdmin(eventId, rq);
     }
+
+    @GetMapping("/{eventId}")
+    public EventFullDto getEvent(@PathVariable Long eventId) {
+        return eventService.getEventById(eventId);
+    }
 }

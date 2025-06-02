@@ -16,7 +16,7 @@ public class PublicCommentController {
 
     private final CommentService commentService;
 
-    @GetMapping("/events/{eventId}/comments")
+    @GetMapping("/comments/{eventId}/comments")
     public ResponseEntity<List<CommentDto>> getComments(@PathVariable Long eventId) {
         return ResponseEntity.status(200)
                 .body(commentService.getComments(eventId));

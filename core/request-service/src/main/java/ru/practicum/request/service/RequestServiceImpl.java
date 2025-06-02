@@ -37,7 +37,7 @@ public class RequestServiceImpl implements RequestService {
 
         log.info("Создание запроса на участие для пользователя {} и события {}", userId, eventId);
 
-        EventFullDto event = getEventFullDto(eventId);
+        EventFullDto event = eventClient.getPublicEventById(eventId);
 
         if (!event.getState().equals(State.PUBLISHED)) {
             throw new ConditionsNotMetException("Нельзя участвовать в неопубликованном событии");
@@ -184,14 +184,6 @@ public class RequestServiceImpl implements RequestService {
 
     private int getConfirmedRequests(long eventId) {
         return requestRepository.findCountOfConfirmedRequestsByEventId(eventId);
-    }
-
-    private EventFullDto getEventFullDto(Long eventId) {
-        EventFullDto dto = eventClient.getPublicEventById(eventId);
-        if (dto == null) {
-            throw new NotFoundException(String.format("Событие с id=%d не найдено", eventId));
-        }
-        return dto;
     }
 
     private void checkUser(Long userId) {

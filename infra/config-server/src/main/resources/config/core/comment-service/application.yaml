@@ -6,7 +6,7 @@ stats-server:
 
 spring:
   application:
-    name: user-service
+    name: comment-service
   jpa:
     hibernate:
       ddl-auto: none

@@ -38,4 +38,7 @@ public interface EventClient {
 
     @GetMapping("/events/{id}")
     EventFullDto getPublicEventById(@PathVariable Long id);
+
+    @GetMapping("/admin/events/{eventId}")
+    EventFullDto getEvent(@PathVariable Long eventId);
 }

@@ -5,6 +5,7 @@ import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import ru.practicum.event.dto.*;
 import ru.practicum.exception.DataAlreadyInUseException;
+import ru.practicum.exception.NotFoundException;
 import ru.practicum.exception.ServiceTemporarilyUnavailable;
 
 import java.util.List;
@@ -55,6 +56,16 @@ public class EventClientFallbackFactory implements FallbackFactory<EventClient> 
                 if (cause instanceof FeignException e) {
                     if (e.status() == 404) {
                         throw new DataAlreadyInUseException(e.getMessage());
+                    }
+                }
+                throw new ServiceTemporarilyUnavailable(cause.getMessage());
+            }
+
+            @Override
+            public EventFullDto getEvent(Long eventId) {
+                if (cause instanceof FeignException e) {
+                    if (e.status() == 404) {
+                        throw new NotFoundException(e.getMessage());
                     }
                 }
                 throw new ServiceTemporarilyUnavailable(cause.getMessage());
