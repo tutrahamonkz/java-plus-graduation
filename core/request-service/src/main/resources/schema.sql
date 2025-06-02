@@ -5,8 +5,6 @@ CREATE TABLE IF NOT EXISTS requests (
     created TIMESTAMP NOT NULL,
     status VARCHAR(50) NOT NULL,
     CONSTRAINT pk_requests PRIMARY KEY (id),
-    CONSTRAINT fk_requests_user FOREIGN KEY (requester_id) REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT fk_requests_event FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
     CONSTRAINT uq_requests UNIQUE (requester_id, event_id)
 );
 
