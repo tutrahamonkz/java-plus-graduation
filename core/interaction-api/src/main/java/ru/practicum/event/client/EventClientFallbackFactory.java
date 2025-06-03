@@ -2,6 +2,7 @@ package ru.practicum.event.client;
 
 import feign.FeignException;
 import org.springframework.cloud.openfeign.FallbackFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import ru.practicum.event.dto.*;
 import ru.practicum.exception.DataAlreadyInUseException;
@@ -57,6 +58,9 @@ public class EventClientFallbackFactory implements FallbackFactory<EventClient> 
                     if (e.status() == 404) {
                         throw new DataAlreadyInUseException(e.getMessage());
                     }
+                    if (e.status() == HttpStatus.INTERNAL_SERVER_ERROR.value()) {
+                        return new EventFullDto();
+                    }
                 }
                 throw new ServiceTemporarilyUnavailable(cause.getMessage());
             }
@@ -66,6 +70,9 @@ public class EventClientFallbackFactory implements FallbackFactory<EventClient> 
                 if (cause instanceof FeignException e) {
                     if (e.status() == 404) {
                         throw new NotFoundException(e.getMessage());
+                    }
+                    if (e.status() == HttpStatus.INTERNAL_SERVER_ERROR.value()) {
+                        return new EventFullDto();
                     }
                 }
                 throw new ServiceTemporarilyUnavailable(cause.getMessage());

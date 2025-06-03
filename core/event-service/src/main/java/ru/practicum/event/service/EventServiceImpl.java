@@ -89,7 +89,7 @@ public class EventServiceImpl implements EventService {
     public List<EventFullDto> getEventsForAdmin(EventDtoGetParam prm) {
         Predicate predicate = null;
         if (prm.getUsers() != null && !prm.getUsers().isEmpty()) {
-            predicate = ExpressionUtils.and(predicate, event.initiator.in(prm.getUsers()));
+            predicate = ExpressionUtils.and(null, event.initiator.in(prm.getUsers()));
         }
         if (prm.getStates() != null && !prm.getStates().isEmpty()) {
             List<State> states = prm.getStates().stream()

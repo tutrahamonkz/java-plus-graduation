@@ -2,6 +2,7 @@ package ru.practicum.request.client;
 
 import feign.FeignException;
 import org.springframework.cloud.openfeign.FallbackFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import ru.practicum.exception.DataAlreadyInUseException;
 import ru.practicum.exception.ServiceTemporarilyUnavailable;
@@ -43,6 +44,9 @@ public class RequestClientFallbackFactory implements FallbackFactory<RequestClie
                 if (cause instanceof FeignException e) {
                     if (e.status() == 409) {
                         throw new DataAlreadyInUseException(e.getMessage());
+                    }
+                    if (e.status() == HttpStatus.INTERNAL_SERVER_ERROR.value()) {
+                        return new EventRequestStatusUpdateResult();
                     }
                 }
                 throw new ServiceTemporarilyUnavailable(cause.getMessage());
