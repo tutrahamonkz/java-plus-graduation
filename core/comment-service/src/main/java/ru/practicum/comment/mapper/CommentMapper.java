@@ -32,9 +32,12 @@ public interface CommentMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "parentComment", ignore = true)
     @Mapping(target = "user", ignore = true)
+    @Mapping(target = "event", source = "eventId")
     Comment toEntity(CommentDto commentDto);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "user", ignore = true)
+    @Mapping(target = "event", source = "eventId")
+    @Mapping(target = "parentComment.id", source = "parentCommentId")
     void updateDto(CommentDto commentDto, @MappingTarget Comment comment);
 }
