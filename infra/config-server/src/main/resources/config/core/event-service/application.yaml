@@ -18,9 +18,9 @@ spring:
       mode: always
   datasource:
     driverClassName: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:6543/main
-    username: main
-    password: main
+    url: jdbc:postgresql://localhost:6543/event_db
+    username: event_user
+    password: password2
   cloud:
     openfeign:
       circuitbreaker:

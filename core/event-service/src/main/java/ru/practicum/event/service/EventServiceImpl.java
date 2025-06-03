@@ -66,10 +66,15 @@ public class EventServiceImpl implements EventService {
         Predicate predicate = event.initiator.eq(prm.getUserId());
         PageRequest pageRequest = PageRequest.of(prm.getFrom(), prm.getSize());
         List<Event> events = eventRepository.findAll(predicate, pageRequest).getContent();
+
+        if (events.isEmpty()) {
+            return new ArrayList<>();
+        }
         List<EventShortDto> dtos = new ArrayList<>();
         for (Event ev : events) {
             dtos.add(addUserShortDtoToShortDto(ev, ev.getInitiator()));
         }
+
         return dtos;
     }
 
@@ -137,6 +142,9 @@ public class EventServiceImpl implements EventService {
         }
         mp.updateFromAdmin(rq, ev);
         ev.setState(rq.getStateAction() == StateAction.PUBLISH_EVENT ? State.PUBLISHED : State.CANCELED);
+        if (rq.getStateAction() == StateAction.PUBLISH_EVENT) {
+            ev.setPublishedOn(LocalDateTime.now());
+        }
         log.info("Обновление события с id {} администратором с параметрами {}", id, rq);
         Event savedEvent = eventRepository.save(ev);
         return addUserShortDtoToFullDto(savedEvent, savedEvent.getInitiator());
@@ -189,7 +197,8 @@ public class EventServiceImpl implements EventService {
         }
         if (prm.getOnlyAvailable() != null && prm.getOnlyAvailable()) { //проверка есть ли еще места на мероприятие
             predicate = ExpressionUtils.and(predicate, (event.participantLimit.eq(0)).or(
-                    event.participantLimit.subtract(event.confirmedRequests).gt(0)));
+                    event.participantLimit.subtract(requestClient.getAllByEventId(prm.getUserId(), prm.getEventId())
+                            .size()).gt(0)));
         }
         Sort sort = Sort.unsorted();
         if (prm.getSort() != null) {
@@ -267,6 +276,7 @@ public class EventServiceImpl implements EventService {
         EventFullDto dto = mp.toEventFullDto(event);
         UserShortDto userDto = userClient.getUser(userId).getBody();
         dto.setInitiator(userDto);
+        dto.setConfirmedRequests(requestClient.getAllByEventId(userId, event.getId()).size());
         return dto;
     }
 

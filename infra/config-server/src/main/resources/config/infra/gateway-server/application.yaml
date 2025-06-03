@@ -35,3 +35,12 @@ logging:
       springframework:
         cloud:
           gateway: TRACE
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    gateway:
+      enabled: true
