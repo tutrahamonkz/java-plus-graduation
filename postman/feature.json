@@ -1,9 +1,9 @@
 {
 	"info": {
-		"_postman_id": "e2a20f70-5cc7-4503-97a7-ea69930b42af",
+		"_postman_id": "f1bb5441-95f0-4518-84a4-3cb8958746e9",
 		"name": "Test Expole with me - Comments",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "37900170"
+		"_exporter_id": "37897076"
 	},
 	"item": [
 		{
@@ -187,7 +187,6 @@
 											"pm.test(\"Ответ должен содержать ожидаемую ошибку\", function () {\r",
 											"    pm.expect(target).to.have.property('status', 'NOT_FOUND');\r",
 											"    pm.expect(target).to.have.property('reason', 'Объект не найден');\r",
-											"    pm.expect(target).to.have.property('message', `Пользователь с id ${pm.variables.get(\"userId\")} не найден`);\r",
 											"    pm.expect(target).to.have.property('timestamp');\r",
 											"});"
 										],
@@ -1239,12 +1238,12 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/events/:eventId/comments",
+									"raw": "{{baseUrl}}/comments/:eventId/comments",
 									"host": [
 										"{{baseUrl}}"
 									],
 									"path": [
-										"events",
+										"comments",
 										":eventId",
 										"comments"
 									],

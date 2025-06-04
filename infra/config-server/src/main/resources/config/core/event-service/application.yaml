@@ -1,0 +1,36 @@
+server:
+  port: 0
+
+stats-server:
+  name: stats-server
+
+spring:
+  application:
+    name: event-service
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        format_sql: true
+  sql:
+    init:
+      mode: always
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:6543/event_db
+    username: event_user
+    password: password2
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
+logging:
+  level:
+    org:
+      hibernate:
+        SQL: DEBUG
+        orm:
+          jdbc:
+            bind: trace
