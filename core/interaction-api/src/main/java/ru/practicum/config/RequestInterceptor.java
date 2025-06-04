@@ -3,23 +3,25 @@ package ru.practicum.config;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
+import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-import ru.practicum.client.StatClient;
-import ru.practicum.dto.HitDto;
-
-import java.time.LocalDateTime;
+import ru.practicum.grpc.stats.UserActionControllerGrpc;
+import ru.practicum.grpc.stats.UserActionProto;
 
 @Component
 @AllArgsConstructor
 public class RequestInterceptor implements HandlerInterceptor {
 
-    private final StatClient statClient;
+    @GrpcClient("collector")
+    private final UserActionControllerGrpc.UserActionControllerBlockingStub client;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        statClient.hit(new HitDto("ewm-main-service", request.getRequestURI(), request.getRemoteAddr(),
-                LocalDateTime.now()));
+        client.collectUserAction(UserActionProto.newBuilder()
+                .setUserId())
+        /*(new HitDto("ewm-main-service", request.getRequestURI(), request.getRemoteAddr(),
+                LocalDateTime.now()));*/
         return true;
     }
 }
