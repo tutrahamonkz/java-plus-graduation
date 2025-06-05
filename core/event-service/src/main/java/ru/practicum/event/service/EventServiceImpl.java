@@ -1,5 +1,6 @@
 package ru.practicum.event.service;
 
+import com.google.protobuf.Timestamp;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Predicate;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +22,9 @@ import ru.practicum.exception.ConflictStateException;
 import ru.practicum.exception.ConflictTimeException;
 import ru.practicum.exception.NotFoundException;
 import ru.practicum.exception.ValidationException;
+import ru.practicum.grpc.stats.ActionTypeProto;
+import ru.practicum.grpc.stats.UserActionControllerGrpc;
+import ru.practicum.grpc.stats.UserActionProto;
 import ru.practicum.request.client.RequestClient;
 import ru.practicum.request.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.request.dto.EventRequestStatusUpdateResult;
@@ -29,6 +33,7 @@ import ru.practicum.request.dto.RequestStatusUpdateDto;
 import ru.practicum.user.client.UserClient;
 import ru.practicum.user.dto.UserShortDto;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +53,7 @@ public class EventServiceImpl implements EventService {
     private final QEvent event = QEvent.event;
     private final RequestClient requestClient;
     private final UserClient userClient;
+    private final UserActionControllerGrpc.UserActionControllerBlockingStub collectorClient;
 
     @Transactional
     @Override
@@ -86,6 +92,18 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new NotFoundException(
                         String.format("Событие с id %d для пользователя с id %d не найдено.",
                                 prm.getEventId(), prm.getUserId())));
+
+        Instant instant = Instant.now();
+        collectorClient.collectUserAction(UserActionProto.newBuilder()
+                .setUserId(prm.getUserId().intValue())
+                .setEventId(prm.getEventId().intValue())
+                .setActionType(ActionTypeProto.ACTION_VIEW)
+                .setTimestamp(Timestamp.newBuilder()
+                        .setSeconds(instant.getEpochSecond())
+                        .setNanos(instant.getNano())
+                        .build())
+                .build());
+
         log.info("Получение события с id {}  для пользователя с id {}", prm.getEventId(), prm.getUserId());
         return addUserShortDtoToFullDto(ev, prm.getUserId());
     }
@@ -258,6 +276,31 @@ public class EventServiceImpl implements EventService {
                 .event(eventFullDto)
                 .build();
         return requestClient.updateRequestStatus(userId, dto);
+    }
+
+    @Override
+    public void likeEvent(Long userId, Long eventId) {
+        log.info("Пользователь: {}, лайкнул событие: {}", userId, eventId);
+
+        Long ownerId = eventRepository.findById(eventId)
+                .orElseThrow(() -> new NotFoundException("Не найдено мероприятие с id: " + eventId)).getId();
+
+        if (requestClient.getAllByEventId(ownerId, eventId).stream()
+                .noneMatch(request -> request.getRequester().equals(userId))) {
+            throw new ValidationException(String.format("Пользователь: {}, не учавствовал в мероприятии: {}",
+                    userId, eventId));
+        }
+
+        Instant instant = Instant.now();
+        collectorClient.collectUserAction(UserActionProto.newBuilder()
+                .setUserId(userId.intValue())
+                .setEventId(eventId.intValue())
+                .setActionType(ActionTypeProto.ACTION_LIKE)
+                .setTimestamp(Timestamp.newBuilder()
+                        .setSeconds(instant.getEpochSecond())
+                        .setNanos(instant.getNano())
+                        .build())
+                .build());
     }
 
     private void dateValid(LocalDateTime start, LocalDateTime end) {

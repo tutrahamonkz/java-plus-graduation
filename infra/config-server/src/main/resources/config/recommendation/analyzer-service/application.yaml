@@ -1,14 +1,6 @@
 server:
   port: 0
 
-grpc:
-  client:
-    hub-router:
-      address: 'static://localhost:59090'
-      enableKeepAlive: true
-      keepAliveWithoutCalls: true
-      negotiationType: plaintext
-
 spring:
   datasource:
     url: jdbc:postgresql://localhost:6541/analyzer

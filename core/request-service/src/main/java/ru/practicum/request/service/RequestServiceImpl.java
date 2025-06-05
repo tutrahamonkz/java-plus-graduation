@@ -1,5 +1,6 @@
 package ru.practicum.request.service;
 
+import com.google.protobuf.Timestamp;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -11,12 +12,16 @@ import ru.practicum.event.dto.EventFullDto;
 import ru.practicum.event.dto.State;
 import ru.practicum.exception.ConditionsNotMetException;
 import ru.practicum.exception.NotFoundException;
+import ru.practicum.grpc.stats.ActionTypeProto;
+import ru.practicum.grpc.stats.UserActionControllerGrpc;
+import ru.practicum.grpc.stats.UserActionProto;
 import ru.practicum.request.dto.*;
 import ru.practicum.request.mapper.RequestMapper;
 import ru.practicum.request.model.Request;
 import ru.practicum.request.repository.RequestRepository;
 import ru.practicum.user.client.UserClient;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -31,6 +36,7 @@ public class RequestServiceImpl implements RequestService {
     EventClient eventClient;
     RequestRepository requestRepository;
     RequestMapper requestMapper;
+    UserActionControllerGrpc.UserActionControllerBlockingStub collectorClient;
 
     @Override
     public ParticipationRequestDto createParticipationRequest(long userId, long eventId) {
@@ -70,6 +76,17 @@ public class RequestServiceImpl implements RequestService {
         } catch (DataIntegrityViolationException e) {
             throw new ConditionsNotMetException("Нельзя добавить повторный запрос на участие в событии");
         }
+
+        Instant instant = Instant.now();
+        collectorClient.collectUserAction(UserActionProto.newBuilder()
+                .setUserId((int) userId)
+                .setEventId((int) eventId)
+                .setActionType(ActionTypeProto.ACTION_REGISTER)
+                .setTimestamp(Timestamp.newBuilder()
+                        .setSeconds(instant.getEpochSecond())
+                        .setNanos(instant.getNano())
+                        .build())
+                .build());
 
         log.info("Создан запрос на участие в событии c id: {}, пользователем с id: {}", eventId, userId);
         return requestMapper.toDto(request);

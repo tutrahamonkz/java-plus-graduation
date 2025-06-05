@@ -34,4 +34,6 @@ public interface EventService {
 
     EventRequestStatusUpdateResult changeEventRequestsStatusByInitiator(EventRequestStatusUpdateRequest updateRequest,
                                                                         long userId, long eventId);
+
+    void likeEvent(Long userId, Long eventId);
 }

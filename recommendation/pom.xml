@@ -5,16 +5,19 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>ru.practicum</groupId>
-        <artifactId>stats</artifactId>
+        <artifactId>explore-with-me</artifactId>
         <version>0.0.1-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>serialization</artifactId>
+    <artifactId>recommendation</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <modules>
-        <module>avro-schemas</module>
-        <module>proto-schemas</module>
+        <module>aggregator</module>
+        <module>analyzer</module>
+        <module>collector-service</module>
+        <module>serialization</module>
     </modules>
+
 </project>
