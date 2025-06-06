@@ -1,37 +1,26 @@
 package ru.practicum.kafka;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import ru.practicum.ewm.stats.avro.EventSimilarityAvro;
+import ru.practicum.ewm.stats.avro.UserActionAvro;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+@Slf4j
+@Component
 public class RecordHandler {
-    /*private static final Map<String, SensorsSnapshotAvro> snapshots = new HashMap<>();
+    private static final double VIEW = 0.4;
+    private static final double LIKE = 1;
+    private static final double REGISTER = 0.8;
 
-    Optional<SensorsSnapshotAvro> updateState(SensorEventAvro event) {
+    private Map<Integer, Double> totalSum = new HashMap<>();
+    private Map<Integer, Map<Integer, Double>> minWeightsSum = new HashMap<>();
 
-        SensorsSnapshotAvro snapshot;
-        if(snapshots.containsKey(event.getHubId())) {
-            snapshot = snapshots.get(event.getHubId());
-        } else {
-            snapshot = SensorsSnapshotAvro.newBuilder()
-                    .setHubId(event.getHubId())
-                    .setTimestamp(event.getTimestamp())
-                    .setSensorsState(new HashMap<>())
-                    .build();
-            snapshots.put(event.getHubId(), snapshot);
-        }
-
-        Map<String, SensorStateAvro> states = snapshot.getSensorsState();
-        if(!states.isEmpty() && states.containsKey(event.getId())) {
-            SensorStateAvro oldState = states.get(event.getId());
-            if(oldState.getTimestamp().isAfter(event.getTimestamp()) ||
-                    oldState.getData().equals(event.getPayload())) {
-                return Optional.empty();
-            }
-        }
-
-        SensorStateAvro state = SensorStateAvro.newBuilder()
-                .setData(event.getPayload())
-                .setTimestamp(event.getTimestamp())
-                .build();
-        snapshot.getSensorsState().put(event.getId(), state);
-        snapshot.setTimestamp(event.getTimestamp());
-        return Optional.of(snapshot);
-    }*/
+    Optional<EventSimilarityAvro> updateState(UserActionAvro userAction) {
+        log.info("UserAction state is {}", userAction);
+        return Optional.empty();
+    }
 }

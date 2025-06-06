@@ -1,25 +1,42 @@
 package ru.practicum.kafka;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.WakeupException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import ru.practicum.ewm.stats.avro.EventSimilarityAvro;
+import ru.practicum.ewm.stats.avro.UserActionAvro;
+
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Component
 public class AggregationStarter {
-    /*private final KafkaProducer<Void, SensorsSnapshotAvro> producer;
-    private final KafkaConsumer<Void, SensorEventAvro> consumer;
+    private final KafkaProducer<Void, EventSimilarityAvro> producer;
+    private final KafkaConsumer<Void, UserActionAvro> consumer;
     private final RecordHandler recordHandler;
 
     private static final Duration CONSUME_ATTEMPT_TIMEOUT = Duration.ofMillis(1000);
-    @Value("${sensor.topic}")
-    private String sensorTopic;
-    @Value("${snapshot.topic}")
-    private String snapshotTopic;
+    @Value("${user.topic}")
+    private String userTopic;
+    @Value("${event.topic}")
+    private String eventTopic;
 
     private static final Map<TopicPartition, OffsetAndMetadata> currentOffsets = new HashMap<>();
 
-    public AggregationStarter(KafkaProducer<Void, SensorsSnapshotAvro> producer,
-                              KafkaConsumer<Void, SensorEventAvro> consumer, RecordHandler recordHandler) {
+    public AggregationStarter(KafkaProducer<Void, EventSimilarityAvro> producer,
+                              KafkaConsumer<Void, UserActionAvro> consumer, RecordHandler recordHandler) {
         this.producer = producer;
         this.consumer = consumer;
         this.recordHandler = recordHandler;
@@ -27,29 +44,29 @@ public class AggregationStarter {
         Runtime.getRuntime().addShutdownHook(new Thread(consumer::wakeup));
     }
 
-    *//**
-     * Метод для начала процесса агрегации данных.
-     * Подписывается на топики для получения событий от датчиков,
-     * формирует снимок их состояния и записывает в кафку.
-     *//*
+    //*
+     //* Метод для начала процесса агрегации данных.
+     //* Подписывается на топики для получения событий от датчиков,
+     //* формирует снимок их состояния и записывает в кафку.
+
     public void start() {
         try {
-            List<String> topics = List.of(sensorTopic);
+            List<String> topics = List.of(userTopic);
             consumer.subscribe(topics);
 
             // Цикл обработки событий
             while (true) {
-                ConsumerRecords<Void, SensorEventAvro> records = consumer.poll(CONSUME_ATTEMPT_TIMEOUT);
+                ConsumerRecords<Void, UserActionAvro> records = consumer.poll(CONSUME_ATTEMPT_TIMEOUT);
 
                 int count = 0;
-                for (ConsumerRecord<Void, SensorEventAvro> record : records) {
+                for (ConsumerRecord<Void, UserActionAvro> record : records) {
                     log.info("Received record {}", record.value());
-                    Optional<SensorsSnapshotAvro> snapshot = recordHandler.updateState(record.value());
+                    Optional<EventSimilarityAvro> snapshot = recordHandler.updateState(record.value());
                     if (snapshot.isPresent()) {
-                        ProducerRecord<Void, SensorsSnapshotAvro> producerRecord = new ProducerRecord<>(snapshotTopic,
+                        ProducerRecord<Void, EventSimilarityAvro> producerRecord = new ProducerRecord<>(eventTopic,
                                 snapshot.get());
 
-                        log.info("Отправка {} в топик {}", snapshot.get(), snapshotTopic);
+                        log.info("Отправка {} в топик {}", snapshot.get(), eventTopic);
 
                         try {
                             producer.send(producerRecord);
@@ -82,8 +99,8 @@ public class AggregationStarter {
         }
     }
 
-    private static void manageOffsets(ConsumerRecord<Void, SensorEventAvro> record, int count,
-                                      KafkaConsumer<Void, SensorEventAvro> consumer) {
+    private static void manageOffsets(ConsumerRecord<Void, UserActionAvro> record, int count,
+                                      KafkaConsumer<Void, UserActionAvro> consumer) {
         // обновляем текущий оффсет для топика-партиции
         currentOffsets.put(
                 new TopicPartition(record.topic(), record.partition()),
@@ -97,5 +114,5 @@ public class AggregationStarter {
                 }
             });
         }
-    }*/
+    }
 }

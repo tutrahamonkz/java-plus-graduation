@@ -93,16 +93,7 @@ public class EventServiceImpl implements EventService {
                         String.format("Событие с id %d для пользователя с id %d не найдено.",
                                 prm.getEventId(), prm.getUserId())));
 
-        Instant instant = Instant.now();
-        collectorClient.collectUserAction(UserActionProto.newBuilder()
-                .setUserId(prm.getUserId().intValue())
-                .setEventId(prm.getEventId().intValue())
-                .setActionType(ActionTypeProto.ACTION_VIEW)
-                .setTimestamp(Timestamp.newBuilder()
-                        .setSeconds(instant.getEpochSecond())
-                        .setNanos(instant.getNano())
-                        .build())
-                .build());
+        sendToCollector(prm.getUserId(), prm.getEventId(), ActionTypeProto.ACTION_VIEW);
 
         log.info("Получение события с id {}  для пользователя с id {}", prm.getEventId(), prm.getUserId());
         return addUserShortDtoToFullDto(ev, prm.getUserId());
@@ -291,16 +282,7 @@ public class EventServiceImpl implements EventService {
                     userId, eventId));
         }
 
-        Instant instant = Instant.now();
-        collectorClient.collectUserAction(UserActionProto.newBuilder()
-                .setUserId(userId.intValue())
-                .setEventId(eventId.intValue())
-                .setActionType(ActionTypeProto.ACTION_LIKE)
-                .setTimestamp(Timestamp.newBuilder()
-                        .setSeconds(instant.getEpochSecond())
-                        .setNanos(instant.getNano())
-                        .build())
-                .build());
+        sendToCollector(userId, eventId, ActionTypeProto.ACTION_LIKE);
     }
 
     private void dateValid(LocalDateTime start, LocalDateTime end) {
@@ -328,6 +310,19 @@ public class EventServiceImpl implements EventService {
         UserShortDto userDto = userClient.getUser(userId).getBody();
         dto.setInitiator(userDto);
         return dto;
+    }
+
+    private void sendToCollector(Long userId, Long eventId, ActionTypeProto actionType) {
+        Instant instant = Instant.now();
+        collectorClient.collectUserAction(UserActionProto.newBuilder()
+                .setUserId(userId.intValue())
+                .setEventId(eventId.intValue())
+                .setActionType(actionType)
+                .setTimestamp(Timestamp.newBuilder()
+                        .setSeconds(instant.getEpochSecond())
+                        .setNanos(instant.getNano())
+                        .build())
+                .build());
     }
 }
 
