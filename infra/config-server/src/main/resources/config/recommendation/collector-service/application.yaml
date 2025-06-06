@@ -3,7 +3,7 @@ server:
 
 grpc:
   server:
-  port: 0
+    port: 0
 
 kafka:
   url: ${KAFKA_URL:http://localhost:9092}
