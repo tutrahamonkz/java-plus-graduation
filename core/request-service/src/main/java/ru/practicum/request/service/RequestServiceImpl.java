@@ -79,8 +79,8 @@ public class RequestServiceImpl implements RequestService {
 
         Instant instant = Instant.now();
         collectorClient.collectUserAction(UserActionProto.newBuilder()
-                .setUserId((int) userId)
-                .setEventId((int) eventId)
+                .setUserId(userId)
+                .setEventId(eventId)
                 .setActionType(ActionTypeProto.ACTION_REGISTER)
                 .setTimestamp(Timestamp.newBuilder()
                         .setSeconds(instant.getEpochSecond())

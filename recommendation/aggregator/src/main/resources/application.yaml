@@ -14,12 +14,3 @@ spring:
       discovery:
         enabled: true
         serviceId: config-server
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://${eureka.instance.hostname:localhost}:${eureka.instance.port:8761}/eureka/
-    retry:
-      max-interval: 10000
-      max-attempts: 20
-      initial-interval: 2000

@@ -18,12 +18,11 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Slf4j
 @Component
 public class AggregationStarter {
-    private final KafkaProducer<Void, EventSimilarityAvro> producer;
+    private final KafkaProducer producer;
     private final KafkaConsumer<Void, UserActionAvro> consumer;
     private final RecordHandler recordHandler;
 
@@ -35,7 +34,7 @@ public class AggregationStarter {
 
     private static final Map<TopicPartition, OffsetAndMetadata> currentOffsets = new HashMap<>();
 
-    public AggregationStarter(KafkaProducer<Void, EventSimilarityAvro> producer,
+    public AggregationStarter(KafkaProducer producer,
                               KafkaConsumer<Void, UserActionAvro> consumer, RecordHandler recordHandler) {
         this.producer = producer;
         this.consumer = consumer;
@@ -61,18 +60,21 @@ public class AggregationStarter {
                 int count = 0;
                 for (ConsumerRecord<Void, UserActionAvro> record : records) {
                     log.info("Received record {}", record.value());
-                    Optional<EventSimilarityAvro> snapshot = recordHandler.updateState(record.value());
-                    if (snapshot.isPresent()) {
-                        ProducerRecord<Void, EventSimilarityAvro> producerRecord = new ProducerRecord<>(eventTopic,
-                                snapshot.get());
+                    List<EventSimilarityAvro> similaritys = recordHandler.updateState(record.value());
+                    log.info("Будет отправлено {} similarity объектов", similaritys.size());
+                    if (!similaritys.isEmpty()) {
+                        for (EventSimilarityAvro similarity : similaritys) {
+                            ProducerRecord<Void, EventSimilarityAvro> producerRecord = new ProducerRecord<>(eventTopic,
+                                    similarity);
 
-                        log.info("Отправка {} в топик {}", snapshot.get(), eventTopic);
+                            log.info("Отправка {} в топик {}", similarity, eventTopic);
 
-                        try {
-                            producer.send(producerRecord);
-                            producer.flush();
-                        } catch (Exception e) {
-                            log.error("Ошибка при отправке сообщения в Kafka: {}", e.getMessage(), e);
+                            try {
+                                producer.send(producerRecord);
+                                producer.flush();
+                            } catch (Exception e) {
+                                log.error("Ошибка при отправке сообщения в Kafka: {}", e.getMessage(), e);
+                            }
                         }
                     }
                     manageOffsets(record, count, consumer);
@@ -84,7 +86,7 @@ public class AggregationStarter {
         } catch (WakeupException ignored) {
             // игнорируем - закрываем консьюмер и продюсер в блоке finally
         } catch (Exception e) {
-            log.error("Ошибка во время обработки событий от датчиков", e);
+            log.error("Ошибка во время обработки событий от пользователей", e);
         } finally {
 
             try {

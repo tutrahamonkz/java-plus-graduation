@@ -315,8 +315,8 @@ public class EventServiceImpl implements EventService {
     private void sendToCollector(Long userId, Long eventId, ActionTypeProto actionType) {
         Instant instant = Instant.now();
         collectorClient.collectUserAction(UserActionProto.newBuilder()
-                .setUserId(userId.intValue())
-                .setEventId(eventId.intValue())
+                .setUserId(userId)
+                .setEventId(eventId)
                 .setActionType(actionType)
                 .setTimestamp(Timestamp.newBuilder()
                         .setSeconds(instant.getEpochSecond())

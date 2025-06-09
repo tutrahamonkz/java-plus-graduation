@@ -8,15 +8,15 @@ protocol UserEventProtocol {
 	}
 
 	record UserActionAvro {
-		int userId;
-		int eventId;
+		long userId;
+		long eventId;
 		ActionTypeAvro actionType;
 		timestamp_ms timestamp;
 	}
 
 	record EventSimilarityAvro {
-		int eventA;
-		int eventB;
+		long eventA;
+		long eventB;
 		double score;
 		timestamp_ms timestamp;
 	}
