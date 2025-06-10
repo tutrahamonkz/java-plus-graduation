@@ -1,12 +1,16 @@
 server:
   port: 0
 
+grpc:
+  server:
+    port: 0
+
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:6541/analyzer
+    url: jdbc:postgresql://localhost:6541/analyzer_db
     driver-class-name: org.postgresql.Driver
     username: analyzer_user
-    password: password1
+    password: password5
   jpa:
     hibernate:
       ddl-auto: none

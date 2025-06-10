@@ -14,8 +14,8 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>aggregator</module>
-        <module>analyzer</module>
+        <module>aggregator-service</module>
+        <module>analyzer-service</module>
         <module>collector-service</module>
         <module>serialization</module>
     </modules>
