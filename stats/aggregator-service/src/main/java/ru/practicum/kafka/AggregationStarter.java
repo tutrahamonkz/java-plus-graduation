@@ -22,7 +22,7 @@ import java.util.Map;
 @Slf4j
 @Component
 public class AggregationStarter {
-    private final KafkaProducer producer;
+    private final KafkaProducer<Void, EventSimilarityAvro> producer;
     private final KafkaConsumer<Void, UserActionAvro> consumer;
     private final RecordHandler recordHandler;
 
@@ -34,7 +34,7 @@ public class AggregationStarter {
 
     private static final Map<TopicPartition, OffsetAndMetadata> currentOffsets = new HashMap<>();
 
-    public AggregationStarter(KafkaProducer producer,
+    public AggregationStarter(KafkaProducer<Void, EventSimilarityAvro> producer,
                               KafkaConsumer<Void, UserActionAvro> consumer, RecordHandler recordHandler) {
         this.producer = producer;
         this.consumer = consumer;
@@ -71,7 +71,6 @@ public class AggregationStarter {
 
                             try {
                                 producer.send(producerRecord);
-                                producer.flush();
                             } catch (Exception e) {
                                 log.error("Ошибка при отправке сообщения в Kafka: {}", e.getMessage(), e);
                             }
@@ -80,6 +79,7 @@ public class AggregationStarter {
                     manageOffsets(record, count, consumer);
                     count++;
                 }
+                producer.flush();
                 consumer.commitSync();
             }
 
