@@ -53,7 +53,7 @@ public class EventClientFallbackFactory implements FallbackFactory<EventClient> 
             }
 
             @Override
-            public EventFullDto getPublicEventById(Long id) {
+            public EventFullDto getPublicEventById(Long id, Long userId) {
                 if (cause instanceof FeignException e) {
                     if (e.status() == 404) {
                         throw new DataAlreadyInUseException(e.getMessage());
