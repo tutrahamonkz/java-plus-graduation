@@ -7,10 +7,10 @@ grpc:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:6541/analyzer_db
-    driver-class-name: org.postgresql.Driver
-    username: analyzer_user
-    password: password5
+    driverClassName: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:6542/stats
+    username: stat
+    password: stat
   jpa:
     hibernate:
       ddl-auto: none

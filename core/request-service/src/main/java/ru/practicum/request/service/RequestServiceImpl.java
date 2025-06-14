@@ -1,20 +1,18 @@
 package ru.practicum.request.service;
 
-import com.google.protobuf.Timestamp;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import ru.practicum.client.CollectorClient;
 import ru.practicum.event.client.EventClient;
 import ru.practicum.event.dto.EventFullDto;
 import ru.practicum.event.dto.State;
 import ru.practicum.exception.ConditionsNotMetException;
 import ru.practicum.exception.NotFoundException;
 import ru.practicum.grpc.stats.ActionTypeProto;
-import ru.practicum.grpc.stats.UserActionControllerGrpc;
-import ru.practicum.grpc.stats.UserActionProto;
 import ru.practicum.request.dto.*;
 import ru.practicum.request.mapper.RequestMapper;
 import ru.practicum.request.model.Request;
@@ -36,14 +34,14 @@ public class RequestServiceImpl implements RequestService {
     EventClient eventClient;
     RequestRepository requestRepository;
     RequestMapper requestMapper;
-    UserActionControllerGrpc.UserActionControllerBlockingStub collectorClient;
+    CollectorClient collectorClient;
 
     @Override
     public ParticipationRequestDto createParticipationRequest(long userId, long eventId) {
 
         log.info("Создание запроса на участие для пользователя {} и события {}", userId, eventId);
 
-        EventFullDto event = eventClient.getPublicEventById(eventId);
+        EventFullDto event = eventClient.getPublicEventById(eventId, userId);
 
         if (!event.getState().equals(State.PUBLISHED)) {
             throw new ConditionsNotMetException("Нельзя участвовать в неопубликованном событии");
@@ -78,15 +76,7 @@ public class RequestServiceImpl implements RequestService {
         }
 
         Instant instant = Instant.now();
-        collectorClient.collectUserAction(UserActionProto.newBuilder()
-                .setUserId(userId)
-                .setEventId(eventId)
-                .setActionType(ActionTypeProto.ACTION_REGISTER)
-                .setTimestamp(Timestamp.newBuilder()
-                        .setSeconds(instant.getEpochSecond())
-                        .setNanos(instant.getNano())
-                        .build())
-                .build());
+        collectorClient.collectUserAction(userId, eventId, ActionTypeProto.ACTION_REGISTER);
 
         log.info("Создан запрос на участие в событии c id: {}, пользователем с id: {}", eventId, userId);
         return requestMapper.toDto(request);

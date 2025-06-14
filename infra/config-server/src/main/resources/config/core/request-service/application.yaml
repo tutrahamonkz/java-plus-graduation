@@ -37,8 +37,8 @@ logging:
 
 grpc:
   client:
-    collector-service: # <- должно соответствовать значению в @GrpcClient
-      address: 'discovery:///collector-service' # адрес gRPC-сервиса
+    collector: # <- должно соответствовать значению в @GrpcClient
+      address: 'discovery:///collector' # адрес gRPC-сервиса
       enableKeepAlive: true
       keepAliveWithoutCalls: true
       negotiationType: plaintext

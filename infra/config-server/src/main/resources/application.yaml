@@ -14,7 +14,6 @@ spring:
             - classpath:config/core/{application}
             - classpath:config/stats/{application}
             - classpath:config/infra/{application}
-            - classpath:config/recommendation/{application}
       discovery:
         enabled: true
         service-id: config-server

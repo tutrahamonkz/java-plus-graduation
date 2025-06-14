@@ -1,6 +1,5 @@
 package ru.practicum.event.service;
 
-import com.google.protobuf.Timestamp;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Predicate;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +10,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.category.service.CategoryService;
+import ru.practicum.client.CollectorClient;
+import ru.practicum.client.RecommendationClient;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.mapper.EventMapper;
 import ru.practicum.event.mapper.LocationMapper;
@@ -23,8 +24,7 @@ import ru.practicum.exception.ConflictTimeException;
 import ru.practicum.exception.NotFoundException;
 import ru.practicum.exception.ValidationException;
 import ru.practicum.grpc.stats.ActionTypeProto;
-import ru.practicum.grpc.stats.UserActionControllerGrpc;
-import ru.practicum.grpc.stats.UserActionProto;
+import ru.practicum.grpc.stats.RecommendedEventProto;
 import ru.practicum.request.client.RequestClient;
 import ru.practicum.request.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.request.dto.EventRequestStatusUpdateResult;
@@ -33,9 +33,9 @@ import ru.practicum.request.dto.RequestStatusUpdateDto;
 import ru.practicum.user.client.UserClient;
 import ru.practicum.user.dto.UserShortDto;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 
@@ -53,7 +53,8 @@ public class EventServiceImpl implements EventService {
     private final QEvent event = QEvent.event;
     private final RequestClient requestClient;
     private final UserClient userClient;
-    private final UserActionControllerGrpc.UserActionControllerBlockingStub collectorClient;
+    private final CollectorClient collectorClient;
+    private final RecommendationClient analyzerClient;
 
     @Transactional
     @Override
@@ -92,8 +93,6 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new NotFoundException(
                         String.format("Событие с id %d для пользователя с id %d не найдено.",
                                 prm.getEventId(), prm.getUserId())));
-
-        sendToCollector(prm.getUserId(), prm.getEventId(), ActionTypeProto.ACTION_VIEW);
 
         log.info("Получение события с id {}  для пользователя с id {}", prm.getEventId(), prm.getUserId());
         return addUserShortDtoToFullDto(ev, prm.getUserId());
@@ -231,12 +230,15 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional
-    public EventFullDto getPublicEventById(Long id, HttpServletRequest rqt) {
-        Predicate predicate = event.state.eq(State.PUBLISHED).and(event.id.eq(id));
+    public EventFullDto getPublicEventById(Long eventId, Long userId, HttpServletRequest rqt) {
+        Predicate predicate = event.state.eq(State.PUBLISHED).and(event.id.eq(eventId));
         Event ev = eventRepository.findOne(predicate)
                 .orElseThrow(() -> new NotFoundException(
-                        String.format("Событие с id %d не найдено.", id)));
+                        String.format("Событие с id %d не найдено.", eventId)));
         viewService.saveView(ev, rqt);
+
+        collectorClient.collectUserAction(userId, eventId, ActionTypeProto.ACTION_VIEW);
+
         return addUserShortDtoToFullDto(ev, ev.getInitiator());
     }
 
@@ -282,7 +284,31 @@ public class EventServiceImpl implements EventService {
                     userId, eventId));
         }
 
-        sendToCollector(userId, eventId, ActionTypeProto.ACTION_LIKE);
+        collectorClient.collectUserAction(userId, eventId, ActionTypeProto.ACTION_LIKE);
+    }
+
+    @Override
+    public List<EventShortDto> findRecommendation(Long userId, int maxResults) {
+
+        log.info("Получение рекомендаций для пользователя: {}, аналогичных мероприятию: {}", userId, maxResults);
+
+        List<RecommendedEventProto> recommendations = analyzerClient.getRecommendationsForUser(userId, maxResults)
+                .toList();
+
+        if (recommendations.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<Long> sortedRecommendations = recommendations.stream()
+                .sorted(Comparator.comparingDouble(RecommendedEventProto::getScore).reversed())
+                .map(RecommendedEventProto::getEventId)
+                .toList();
+
+        List<Event> events = eventRepository.findAllByIdIn(sortedRecommendations);
+
+        return events.stream()
+                .map(mp::toEventShortDto)
+                .toList();
     }
 
     private void dateValid(LocalDateTime start, LocalDateTime end) {
@@ -310,19 +336,6 @@ public class EventServiceImpl implements EventService {
         UserShortDto userDto = userClient.getUser(userId).getBody();
         dto.setInitiator(userDto);
         return dto;
-    }
-
-    private void sendToCollector(Long userId, Long eventId, ActionTypeProto actionType) {
-        Instant instant = Instant.now();
-        collectorClient.collectUserAction(UserActionProto.newBuilder()
-                .setUserId(userId)
-                .setEventId(eventId)
-                .setActionType(actionType)
-                .setTimestamp(Timestamp.newBuilder()
-                        .setSeconds(instant.getEpochSecond())
-                        .setNanos(instant.getNano())
-                        .build())
-                .build());
     }
 }
 
