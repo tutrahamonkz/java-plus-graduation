@@ -5,21 +5,20 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-import ru.practicum.client.StatClient;
-import ru.practicum.dto.HitDto;
 
-import java.time.LocalDateTime;
+import java.io.IOException;
 
 @Component
 @AllArgsConstructor
 public class RequestInterceptor implements HandlerInterceptor {
 
-    private final StatClient statClient;
+    /*@GrpcClient("collector")
+    private final UserActionControllerGrpc.UserActionControllerBlockingStub client;*/
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        statClient.hit(new HitDto("ewm-main-service", request.getRequestURI(), request.getRemoteAddr(),
-                LocalDateTime.now()));
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws IOException {
+        /*(new HitDto("ewm-main-service", request.getRequestURI(), request.getRemoteAddr(),
+                LocalDateTime.now()));*/
         return true;
     }
 }

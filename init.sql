@@ -3,7 +3,6 @@ CREATE DATABASE event_db;
 CREATE DATABASE request_db;
 CREATE DATABASE user_db;
 
-
 CREATE USER comment_user WITH PASSWORD 'password1';
 CREATE USER event_user WITH PASSWORD 'password2';
 CREATE USER request_user WITH PASSWORD 'password3';

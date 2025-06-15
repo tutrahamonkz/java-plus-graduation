@@ -37,7 +37,7 @@ public interface EventClient {
     List<EventShortDto> getPublicEvents(@SpringQueryMap EventDtoGetParam prm);
 
     @GetMapping("/events/{id}")
-    EventFullDto getPublicEventById(@PathVariable Long id);
+    EventFullDto getPublicEventById(@PathVariable Long id, @RequestHeader(value = "X-EWM-USER-ID", required = false) Long userId);
 
     @GetMapping("/admin/events/{eventId}")
     EventFullDto getEvent(@PathVariable Long eventId);

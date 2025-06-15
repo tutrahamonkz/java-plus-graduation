@@ -24,7 +24,7 @@ public interface EventService {
 
     List<EventShortDto> getPublicEvents(EventDtoGetParam prm, HttpServletRequest rqt);
 
-    EventFullDto getPublicEventById(Long id, HttpServletRequest rqt);
+    EventFullDto getPublicEventById(Long id, Long userId, HttpServletRequest rqt);
 
     EventFullDto getEventById(Long id);
 
@@ -34,4 +34,8 @@ public interface EventService {
 
     EventRequestStatusUpdateResult changeEventRequestsStatusByInitiator(EventRequestStatusUpdateRequest updateRequest,
                                                                         long userId, long eventId);
+
+    void likeEvent(Long userId, Long eventId);
+
+    List<EventShortDto> findRecommendation(Long userId, int maxResults);
 }

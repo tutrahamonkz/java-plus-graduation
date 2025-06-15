@@ -1,0 +1,33 @@
+server:
+  port: 0
+
+grpc:
+  server:
+    port: 0
+
+spring:
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:6542/stats
+    username: stat
+    password: stat
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        format_sql: true
+  sql:
+    init:
+      mode: always
+
+kafka:
+  consumer:
+    bootstrap-servers: ${KAFKA_URL:localhost:9092}
+
+analyzer:
+  topic:
+    user:
+      v1: stats.user-actions.v1
+    event:
+      v1: stats.events-similarity.v1
